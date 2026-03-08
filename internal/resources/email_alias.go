@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/edvin/go-hosting"
+	"github.com/massive-hosting/go-hosting"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"

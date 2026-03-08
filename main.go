@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/edvin/terraform-provider-hosting/internal/provider"
+	"github.com/massive-hosting/terraform-provider-hosting/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
@@ -17,7 +17,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/edvin/hosting",
+		Address: "registry.terraform.io/massive-hosting/hosting",
 		Debug:   debug,
 	}
 

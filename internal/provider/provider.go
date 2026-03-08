@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/edvin/go-hosting"
-	"github.com/edvin/terraform-provider-hosting/internal/resources"
+	"github.com/massive-hosting/go-hosting"
+	"github.com/massive-hosting/terraform-provider-hosting/internal/resources"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"

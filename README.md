@@ -13,7 +13,7 @@ Terraform provider for managing resources on the [Hosting Platform](https://mass
 terraform {
   required_providers {
     hosting = {
-      source = "edvin/hosting"
+      source = "massive-hosting/hosting"
     }
   }
 }
@@ -128,7 +128,7 @@ go vet ./...
 For local testing, add a `replace` directive in `go.mod`:
 
 ```
-replace github.com/edvin/go-hosting => ../go-hosting
+replace github.com/massive-hosting/go-hosting => ../go-hosting
 ```
 
 ## License

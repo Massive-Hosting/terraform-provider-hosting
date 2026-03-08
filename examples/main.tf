@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     hosting = {
-      source = "registry.terraform.io/edvin/hosting"
+      source = "massive-hosting/hosting"
     }
   }
 }

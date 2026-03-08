@@ -1,11 +1,11 @@
-module github.com/edvin/terraform-provider-hosting
+module github.com/massive-hosting/terraform-provider-hosting
 
 go 1.26.0
 
 require (
-	github.com/edvin/go-hosting v0.1.0
 	github.com/hashicorp/terraform-plugin-framework v1.18.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
+	github.com/massive-hosting/go-hosting v0.2.0
 )
 
 require (
