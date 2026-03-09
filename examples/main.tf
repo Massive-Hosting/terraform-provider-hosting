@@ -159,6 +159,27 @@ resource "hosting_email_forward" "backup" {
   keep_copy        = true
 }
 
+# ─── Preview Environments ──────────────────────────────────────────
+
+resource "hosting_preview_config" "myapp" {
+  webapp_id              = hosting_webapp.myapp.id
+  github_repo_owner      = "my-org"
+  github_repo_name       = "my-app"
+  github_installation_id = 12345678
+  database_mode          = "clone"
+  source_database_id     = hosting_database.main.id
+  auto_destroy_hours     = 48
+
+  env_var_overrides {
+    name  = "APP_URL"
+    value = "{{PREVIEW_URL}}"
+  }
+  env_var_overrides {
+    name  = "DATABASE_URL"
+    value = "mysql://{{DB_USERNAME}}:{{DB_PASSWORD}}@{{DB_HOST}}/{{DB_NAME}}"
+  }
+}
+
 # ─── Container ─────────────────────────────────────────────────────
 
 resource "hosting_container" "meilisearch" {

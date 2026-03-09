@@ -97,6 +97,7 @@ resource "hosting_fqdn" "main" {
 | `hosting_wireguard_peer` | WireGuard VPN peer |
 | `hosting_ssh_key` | SSH public key |
 | `hosting_egress_rule` | Egress firewall rule |
+| `hosting_preview_config` | Preview environment configuration |
 
 See the [docs/](docs/) directory for full documentation on each resource.
 

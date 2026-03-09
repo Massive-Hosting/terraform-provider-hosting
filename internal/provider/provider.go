@@ -106,6 +106,7 @@ func (p *hostingProvider) Resources(_ context.Context) []func() resource.Resourc
 		resources.NewContainerEnvVars,
 		resources.NewWebappDaemon,
 		resources.NewWebappCronJob,
+		resources.NewPreviewConfig,
 	}
 }
 
