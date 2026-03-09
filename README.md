@@ -98,6 +98,8 @@ resource "hosting_fqdn" "main" {
 | `hosting_ssh_key` | SSH public key |
 | `hosting_egress_rule` | Egress firewall rule |
 | `hosting_preview_config` | Preview environment configuration |
+| `hosting_uptime_monitor` | HTTP uptime health check |
+| `hosting_webhook_endpoint` | Webhook endpoint for event notifications |
 
 See the [docs/](docs/) directory for full documentation on each resource.
 

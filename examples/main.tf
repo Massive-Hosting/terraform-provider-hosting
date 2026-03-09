@@ -207,6 +207,15 @@ resource "hosting_uptime_monitor" "main" {
   expected_status  = 200
 }
 
+# ─── Webhooks ──────────────────────────────────────────────────────
+
+resource "hosting_webhook_endpoint" "deploy_notifications" {
+  tenant_id   = var.tenant_id
+  url         = "https://myapp.example.com/webhooks/hosting"
+  description = "Deploy notifications"
+  events      = ["deploy.success", "deploy.failed"]
+}
+
 # ─── Networking ────────────────────────────────────────────────────
 
 resource "hosting_wireguard_peer" "dev" {
