@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -32,6 +33,12 @@ type webappModel struct {
 	PublicFolder           types.String `tfsdk:"public_folder"`
 	EnvFileName            types.String `tfsdk:"env_file_name"`
 	ServiceHostnameEnabled types.Bool   `tfsdk:"service_hostname_enabled"`
+	WafEnabled             types.Bool   `tfsdk:"waf_enabled"`
+	WafMode                types.String `tfsdk:"waf_mode"`
+	WafExclusions          types.List   `tfsdk:"waf_exclusions"`
+	RateLimitEnabled       types.Bool   `tfsdk:"rate_limit_enabled"`
+	RateLimitRPS           types.Int64  `tfsdk:"rate_limit_rps"`
+	RateLimitBurst         types.Int64  `tfsdk:"rate_limit_burst"`
 	Status                 types.String `tfsdk:"status"`
 }
 
@@ -43,6 +50,12 @@ type webappAPI struct {
 	PublicFolder           string `json:"public_folder"`
 	EnvFileName            string `json:"env_file_name"`
 	ServiceHostnameEnabled bool   `json:"service_hostname_enabled"`
+	WafEnabled             bool   `json:"waf_enabled"`
+	WafMode                string `json:"waf_mode"`
+	WafExclusions          []int  `json:"waf_exclusions"`
+	RateLimitEnabled       bool   `json:"rate_limit_enabled"`
+	RateLimitRPS           int    `json:"rate_limit_rps"`
+	RateLimitBurst         int    `json:"rate_limit_burst"`
 	Status                 string `json:"status"`
 }
 
@@ -105,6 +118,42 @@ func (r *webappResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "Whether the built-in service hostname is enabled.",
 				Default:     booldefault.StaticBool(true),
 			},
+			"waf_enabled": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Enable ModSecurity WAF with OWASP CRS.",
+				Default:     booldefault.StaticBool(false),
+			},
+			"waf_mode": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "WAF mode: block (reject malicious requests) or detect (log only).",
+				Default:     stringdefault.StaticString("block"),
+			},
+			"waf_exclusions": schema.ListAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "List of OWASP CRS rule IDs to exclude.",
+				ElementType: types.Int64Type,
+			},
+			"rate_limit_enabled": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Enable per-IP rate limiting.",
+				Default:     booldefault.StaticBool(false),
+			},
+			"rate_limit_rps": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Requests per second per source IP (0-100000).",
+				Default:     int64default.StaticInt64(0),
+			},
+			"rate_limit_burst": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Burst size — requests allowed above rate limit.",
+				Default:     int64default.StaticInt64(0),
+			},
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "Current status.",
@@ -145,6 +194,28 @@ func (r *webappResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 	if !plan.PublicFolder.IsNull() && !plan.PublicFolder.IsUnknown() {
 		body["public_folder"] = plan.PublicFolder.ValueString()
+	}
+	if !plan.WafEnabled.IsNull() && !plan.WafEnabled.IsUnknown() {
+		body["waf_enabled"] = plan.WafEnabled.ValueBool()
+	}
+	if !plan.WafMode.IsNull() && !plan.WafMode.IsUnknown() {
+		body["waf_mode"] = plan.WafMode.ValueString()
+	}
+	if !plan.WafExclusions.IsNull() && !plan.WafExclusions.IsUnknown() {
+		var exclusions []int
+		for _, v := range plan.WafExclusions.Elements() {
+			exclusions = append(exclusions, int(v.(types.Int64).ValueInt64()))
+		}
+		body["waf_exclusions"] = exclusions
+	}
+	if !plan.RateLimitEnabled.IsNull() && !plan.RateLimitEnabled.IsUnknown() {
+		body["rate_limit_enabled"] = plan.RateLimitEnabled.ValueBool()
+	}
+	if !plan.RateLimitRPS.IsNull() && !plan.RateLimitRPS.IsUnknown() {
+		body["rate_limit_rps"] = plan.RateLimitRPS.ValueInt64()
+	}
+	if !plan.RateLimitBurst.IsNull() && !plan.RateLimitBurst.IsUnknown() {
+		body["rate_limit_burst"] = plan.RateLimitBurst.ValueInt64()
 	}
 
 	result, err := hosting.Post[webappAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/webapps", customerID), body)
@@ -203,6 +274,20 @@ func (r *webappResource) Update(ctx context.Context, req resource.UpdateRequest,
 		"runtime_version":          plan.RuntimeVersion.ValueString(),
 		"public_folder":            plan.PublicFolder.ValueString(),
 		"service_hostname_enabled": plan.ServiceHostnameEnabled.ValueBool(),
+		"waf_enabled":              plan.WafEnabled.ValueBool(),
+		"waf_mode":                 plan.WafMode.ValueString(),
+		"rate_limit_enabled":       plan.RateLimitEnabled.ValueBool(),
+		"rate_limit_rps":           plan.RateLimitRPS.ValueInt64(),
+		"rate_limit_burst":         plan.RateLimitBurst.ValueInt64(),
+	}
+	if !plan.WafExclusions.IsNull() && !plan.WafExclusions.IsUnknown() {
+		var exclusions []int
+		for _, v := range plan.WafExclusions.Elements() {
+			exclusions = append(exclusions, int(v.(types.Int64).ValueInt64()))
+		}
+		body["waf_exclusions"] = exclusions
+	} else {
+		body["waf_exclusions"] = []int{}
 	}
 
 	result, err := hosting.Put[webappAPI](ctx, r.data.Client, "/api/v1/webapps/"+state.ID.ValueString(), body)
@@ -247,7 +332,19 @@ func (r *webappResource) mapToState(api *webappAPI, state *webappModel, customer
 	state.PublicFolder = types.StringValue(api.PublicFolder)
 	state.EnvFileName = types.StringValue(api.EnvFileName)
 	state.ServiceHostnameEnabled = types.BoolValue(api.ServiceHostnameEnabled)
+	state.WafEnabled = types.BoolValue(api.WafEnabled)
+	state.WafMode = types.StringValue(api.WafMode)
+	state.RateLimitEnabled = types.BoolValue(api.RateLimitEnabled)
+	state.RateLimitRPS = types.Int64Value(int64(api.RateLimitRPS))
+	state.RateLimitBurst = types.Int64Value(int64(api.RateLimitBurst))
 	state.Status = types.StringValue(api.Status)
+
+	exclusions := make([]types.Int64, len(api.WafExclusions))
+	for i, id := range api.WafExclusions {
+		exclusions[i] = types.Int64Value(int64(id))
+	}
+	state.WafExclusions, _ = types.ListValueFrom(context.Background(), types.Int64Type, exclusions)
+
 	if customerID != "" {
 		state.CustomerID = types.StringValue(customerID)
 	}

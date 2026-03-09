@@ -32,6 +32,16 @@ resource "hosting_webapp" "myapp" {
   runtime         = "php"
   runtime_version = "8.4"
   public_folder   = "public"
+
+  # WAF protection (ModSecurity + OWASP CRS)
+  waf_enabled    = true
+  waf_mode       = "block"
+  waf_exclusions = [942100]
+
+  # Rate limiting (per source IP)
+  rate_limit_enabled = true
+  rate_limit_rps     = 100
+  rate_limit_burst   = 200
 }
 
 resource "hosting_webapp_env_vars" "myapp" {
