@@ -28,6 +28,7 @@ type webappModel struct {
 	ID                     types.String `tfsdk:"id"`
 	CustomerID             types.String `tfsdk:"customer_id"`
 	TenantID               types.String `tfsdk:"tenant_id"`
+	Folder                 types.String `tfsdk:"folder"`
 	Runtime                types.String `tfsdk:"runtime"`
 	RuntimeVersion         types.String `tfsdk:"runtime_version"`
 	PublicFolder           types.String `tfsdk:"public_folder"`
@@ -45,6 +46,7 @@ type webappModel struct {
 type webappAPI struct {
 	ID                     string `json:"id"`
 	TenantID               string `json:"tenant_id"`
+	Folder                 string `json:"folder"`
 	Runtime                string `json:"runtime"`
 	RuntimeVersion         string `json:"runtime_version"`
 	PublicFolder           string `json:"public_folder"`
@@ -92,6 +94,15 @@ func (r *webappResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "Tenant ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"folder": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Human-readable folder name for the webapp on disk. Immutable after creation. Auto-generated if not provided.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"runtime": schema.StringAttribute{
@@ -191,6 +202,9 @@ func (r *webappResource) Create(ctx context.Context, req resource.CreateRequest,
 		"tenant_id":       plan.TenantID.ValueString(),
 		"runtime":         plan.Runtime.ValueString(),
 		"runtime_version": plan.RuntimeVersion.ValueString(),
+	}
+	if !plan.Folder.IsNull() && !plan.Folder.IsUnknown() && plan.Folder.ValueString() != "" {
+		body["folder"] = plan.Folder.ValueString()
 	}
 	if !plan.PublicFolder.IsNull() && !plan.PublicFolder.IsUnknown() {
 		body["public_folder"] = plan.PublicFolder.ValueString()
@@ -327,6 +341,7 @@ func (r *webappResource) ImportState(ctx context.Context, req resource.ImportSta
 func (r *webappResource) mapToState(api *webappAPI, state *webappModel, customerID string) {
 	state.ID = types.StringValue(api.ID)
 	state.TenantID = types.StringValue(api.TenantID)
+	state.Folder = types.StringValue(api.Folder)
 	state.Runtime = types.StringValue(api.Runtime)
 	state.RuntimeVersion = types.StringValue(api.RuntimeVersion)
 	state.PublicFolder = types.StringValue(api.PublicFolder)
