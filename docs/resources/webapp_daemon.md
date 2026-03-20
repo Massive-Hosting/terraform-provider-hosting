@@ -15,7 +15,6 @@ Manages a long-running daemon process for a webapp. Daemons can optionally proxy
 resource "hosting_webapp_daemon" "worker" {
   webapp_id      = hosting_webapp.myapp.id
   command        = "php artisan queue:work --tries=3"
-  num_procs      = 2
   max_memory_mb  = 256
   stop_signal    = "TERM"
   stop_wait_secs = 30
@@ -41,7 +40,6 @@ resource "hosting_webapp_daemon" "api" {
 - `customer_id` (String) Customer ID. Defaults to provider `customer_id`.
 - `proxy_path` (String) URL path prefix to proxy to this daemon (e.g. `/api`). Default: `""`.
 - `proxy_port` (Number) Port the daemon listens on for proxied requests. Default: `0`.
-- `num_procs` (Number) Number of processes to run. Default: `1`.
 - `stop_signal` (String) Signal to send when stopping (`TERM`, `INT`, `QUIT`, `KILL`). Default: `"TERM"`.
 - `stop_wait_secs` (Number) Seconds to wait after stop signal before killing. Default: `10`.
 - `max_memory_mb` (Number) Memory limit in MB (0 = unlimited). Default: `0`.

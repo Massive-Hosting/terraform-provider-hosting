@@ -40,6 +40,9 @@ type webappModel struct {
 	RateLimitEnabled       types.Bool   `tfsdk:"rate_limit_enabled"`
 	RateLimitRPS           types.Int64  `tfsdk:"rate_limit_rps"`
 	RateLimitBurst         types.Int64  `tfsdk:"rate_limit_burst"`
+	RuntimeConfig          types.String `tfsdk:"runtime_config"`
+	CdnEnabled             types.Bool   `tfsdk:"cdn_enabled"`
+	CdnConfig              types.String `tfsdk:"cdn_config"`
 	Status                 types.String `tfsdk:"status"`
 }
 
@@ -58,6 +61,9 @@ type webappAPI struct {
 	RateLimitEnabled       bool   `json:"rate_limit_enabled"`
 	RateLimitRPS           int    `json:"rate_limit_rps"`
 	RateLimitBurst         int    `json:"rate_limit_burst"`
+	RuntimeConfig          string `json:"runtime_config"`
+	CdnEnabled             bool   `json:"cdn_enabled"`
+	CdnConfig              string `json:"cdn_config"`
 	Status                 string `json:"status"`
 }
 
@@ -165,6 +171,24 @@ func (r *webappResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "Burst size — requests allowed above rate limit.",
 				Default:     int64default.StaticInt64(0),
 			},
+			"runtime_config": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Runtime-specific configuration as JSON (e.g. {\"entry_point\": \"server.js\"} for Node.js).",
+				Default:     stringdefault.StaticString("{}"),
+			},
+			"cdn_enabled": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Enable built-in Varnish CDN caching.",
+				Default:     booldefault.StaticBool(false),
+			},
+			"cdn_config": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "CDN configuration as JSON (cache rules, TTLs, bypass cookies).",
+				Default:     stringdefault.StaticString("{}"),
+			},
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "Current status.",
@@ -231,6 +255,15 @@ func (r *webappResource) Create(ctx context.Context, req resource.CreateRequest,
 	if !plan.RateLimitBurst.IsNull() && !plan.RateLimitBurst.IsUnknown() {
 		body["rate_limit_burst"] = plan.RateLimitBurst.ValueInt64()
 	}
+	if !plan.RuntimeConfig.IsNull() && !plan.RuntimeConfig.IsUnknown() && plan.RuntimeConfig.ValueString() != "{}" {
+		body["runtime_config"] = plan.RuntimeConfig.ValueString()
+	}
+	if !plan.CdnEnabled.IsNull() && !plan.CdnEnabled.IsUnknown() {
+		body["cdn_enabled"] = plan.CdnEnabled.ValueBool()
+	}
+	if !plan.CdnConfig.IsNull() && !plan.CdnConfig.IsUnknown() && plan.CdnConfig.ValueString() != "{}" {
+		body["cdn_config"] = plan.CdnConfig.ValueString()
+	}
 
 	result, err := hosting.Post[webappAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/webapps", customerID), body)
 	if err != nil {
@@ -293,6 +326,13 @@ func (r *webappResource) Update(ctx context.Context, req resource.UpdateRequest,
 		"rate_limit_enabled":       plan.RateLimitEnabled.ValueBool(),
 		"rate_limit_rps":           plan.RateLimitRPS.ValueInt64(),
 		"rate_limit_burst":         plan.RateLimitBurst.ValueInt64(),
+		"cdn_enabled":             plan.CdnEnabled.ValueBool(),
+	}
+	if !plan.RuntimeConfig.IsNull() && !plan.RuntimeConfig.IsUnknown() {
+		body["runtime_config"] = plan.RuntimeConfig.ValueString()
+	}
+	if !plan.CdnConfig.IsNull() && !plan.CdnConfig.IsUnknown() {
+		body["cdn_config"] = plan.CdnConfig.ValueString()
 	}
 	if !plan.WafExclusions.IsNull() && !plan.WafExclusions.IsUnknown() {
 		var exclusions []int
@@ -352,6 +392,9 @@ func (r *webappResource) mapToState(api *webappAPI, state *webappModel, customer
 	state.RateLimitEnabled = types.BoolValue(api.RateLimitEnabled)
 	state.RateLimitRPS = types.Int64Value(int64(api.RateLimitRPS))
 	state.RateLimitBurst = types.Int64Value(int64(api.RateLimitBurst))
+	state.RuntimeConfig = types.StringValue(api.RuntimeConfig)
+	state.CdnEnabled = types.BoolValue(api.CdnEnabled)
+	state.CdnConfig = types.StringValue(api.CdnConfig)
 	state.Status = types.StringValue(api.Status)
 
 	exclusions := make([]types.Int64, len(api.WafExclusions))

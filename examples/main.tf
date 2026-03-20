@@ -62,7 +62,6 @@ resource "hosting_webapp_env_vars" "myapp" {
 resource "hosting_webapp_daemon" "worker" {
   webapp_id     = hosting_webapp.myapp.id
   command       = "php artisan queue:work --tries=3"
-  num_procs     = 2
   max_memory_mb = 256
 }
 

@@ -25,12 +25,14 @@ type databaseModel struct {
 	ID         types.String `tfsdk:"id"`
 	CustomerID types.String `tfsdk:"customer_id"`
 	TenantID   types.String `tfsdk:"tenant_id"`
+	Engine     types.String `tfsdk:"engine"`
 	Status     types.String `tfsdk:"status"`
 }
 
 type databaseAPI struct {
 	ID       string `json:"id"`
 	TenantID string `json:"tenant_id"`
+	Engine   string `json:"engine"`
 	Status   string `json:"status"`
 }
 
@@ -44,7 +46,7 @@ func (r *databaseResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a MySQL database.",
+		Description: "Manages a database (MySQL or PostgreSQL).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true, Description: "Database ID.",
@@ -57,6 +59,10 @@ func (r *databaseResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"tenant_id": schema.StringAttribute{
 				Required: true, Description: "Tenant ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
+			"engine": schema.StringAttribute{
+				Optional: true, Computed: true, Description: "Database engine: 'mysql' (default) or 'postgres'.",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
 			},
 			"status": schema.StringAttribute{
 				Computed: true, Description: "Current status.",
@@ -90,9 +96,14 @@ func (r *databaseResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	result, err := hosting.Post[databaseAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/databases", customerID), map[string]any{
+	body := map[string]any{
 		"tenant_id": plan.TenantID.ValueString(),
-	})
+	}
+	if !plan.Engine.IsNull() && !plan.Engine.IsUnknown() {
+		body["engine"] = plan.Engine.ValueString()
+	}
+
+	result, err := hosting.Post[databaseAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/databases", customerID), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Database Failed", err.Error())
 		return
@@ -159,6 +170,7 @@ func (r *databaseResource) ImportState(ctx context.Context, req resource.ImportS
 func mapDatabase(api *databaseAPI, state *databaseModel, customerID string) {
 	state.ID = types.StringValue(api.ID)
 	state.TenantID = types.StringValue(api.TenantID)
+	state.Engine = types.StringValue(api.Engine)
 	state.Status = types.StringValue(api.Status)
 	if customerID != "" {
 		state.CustomerID = types.StringValue(customerID)

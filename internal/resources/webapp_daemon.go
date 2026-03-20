@@ -30,11 +30,12 @@ type webappDaemonModel struct {
 	Command       types.String `tfsdk:"command"`
 	ProxyPath     types.String `tfsdk:"proxy_path"`
 	ProxyPort     types.Int64  `tfsdk:"proxy_port"`
-	NumProcs      types.Int64  `tfsdk:"num_procs"`
 	StopSignal    types.String `tfsdk:"stop_signal"`
 	StopWaitSecs  types.Int64  `tfsdk:"stop_wait_secs"`
-	MaxMemoryMB   types.Int64  `tfsdk:"max_memory_mb"`
-	Enabled       types.Bool   `tfsdk:"enabled"`
+	MaxMemoryMB      types.Int64  `tfsdk:"max_memory_mb"`
+	RestartPolicy    types.String `tfsdk:"restart_policy"`
+	RestartMaxRetries types.Int64 `tfsdk:"restart_max_retries"`
+	Enabled          types.Bool   `tfsdk:"enabled"`
 	Status        types.String `tfsdk:"status"`
 	StatusMessage types.String `tfsdk:"status_message"`
 }
@@ -45,11 +46,12 @@ type daemonAPI struct {
 	Command       string  `json:"command"`
 	ProxyPath     string  `json:"proxy_path"`
 	ProxyPort     int64   `json:"proxy_port"`
-	NumProcs      int64   `json:"num_procs"`
 	StopSignal    string  `json:"stop_signal"`
 	StopWaitSecs  int64   `json:"stop_wait_secs"`
-	MaxMemoryMB   int64   `json:"max_memory_mb"`
-	Enabled       bool    `json:"enabled"`
+	MaxMemoryMB      int64  `json:"max_memory_mb"`
+	RestartPolicy    string `json:"restart_policy"`
+	RestartMaxRetries int64 `json:"restart_max_retries"`
+	Enabled          bool   `json:"enabled"`
 	Status        string  `json:"status"`
 	StatusMessage *string `json:"status_message"`
 }
@@ -89,10 +91,6 @@ func (r *webappDaemonResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional: true, Computed: true, Description: "Port the daemon listens on for proxied requests.",
 				Default: int64default.StaticInt64(0),
 			},
-			"num_procs": schema.Int64Attribute{
-				Optional: true, Computed: true, Description: "Number of processes to run.",
-				Default: int64default.StaticInt64(1),
-			},
 			"stop_signal": schema.StringAttribute{
 				Optional: true, Computed: true, Description: "Signal to send when stopping (TERM, INT, QUIT, KILL).",
 				Default: stringdefault.StaticString("TERM"),
@@ -103,6 +101,14 @@ func (r *webappDaemonResource) Schema(_ context.Context, _ resource.SchemaReques
 			},
 			"max_memory_mb": schema.Int64Attribute{
 				Optional: true, Computed: true, Description: "Memory limit in MB (0 = unlimited).",
+				Default: int64default.StaticInt64(0),
+			},
+			"restart_policy": schema.StringAttribute{
+				Optional: true, Computed: true, Description: "Restart policy: no, on-failure, always.",
+				Default: stringdefault.StaticString("on-failure"),
+			},
+			"restart_max_retries": schema.Int64Attribute{
+				Optional: true, Computed: true, Description: "Max restart attempts before giving up (0 = unlimited).",
 				Default: int64default.StaticInt64(0),
 			},
 			"enabled": schema.BoolAttribute{
@@ -144,13 +150,14 @@ func (r *webappDaemonResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	body := map[string]any{
-		"command":        plan.Command.ValueString(),
-		"proxy_path":     plan.ProxyPath.ValueString(),
-		"proxy_port":     plan.ProxyPort.ValueInt64(),
-		"num_procs":      plan.NumProcs.ValueInt64(),
-		"stop_signal":    plan.StopSignal.ValueString(),
-		"stop_wait_secs": plan.StopWaitSecs.ValueInt64(),
-		"max_memory_mb":  plan.MaxMemoryMB.ValueInt64(),
+		"command":             plan.Command.ValueString(),
+		"proxy_path":          plan.ProxyPath.ValueString(),
+		"proxy_port":          plan.ProxyPort.ValueInt64(),
+		"stop_signal":         plan.StopSignal.ValueString(),
+		"stop_wait_secs":      plan.StopWaitSecs.ValueInt64(),
+		"max_memory_mb":       plan.MaxMemoryMB.ValueInt64(),
+		"restart_policy":      plan.RestartPolicy.ValueString(),
+		"restart_max_retries": plan.RestartMaxRetries.ValueInt64(),
 	}
 
 	result, err := hosting.Post[daemonAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/daemons", plan.WebappID.ValueString()), body)
@@ -199,13 +206,14 @@ func (r *webappDaemonResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	body := map[string]any{
-		"command":        plan.Command.ValueString(),
-		"proxy_path":     plan.ProxyPath.ValueString(),
-		"proxy_port":     plan.ProxyPort.ValueInt64(),
-		"num_procs":      plan.NumProcs.ValueInt64(),
-		"stop_signal":    plan.StopSignal.ValueString(),
-		"stop_wait_secs": plan.StopWaitSecs.ValueInt64(),
-		"max_memory_mb":  plan.MaxMemoryMB.ValueInt64(),
+		"command":             plan.Command.ValueString(),
+		"proxy_path":          plan.ProxyPath.ValueString(),
+		"proxy_port":          plan.ProxyPort.ValueInt64(),
+		"stop_signal":         plan.StopSignal.ValueString(),
+		"stop_wait_secs":      plan.StopWaitSecs.ValueInt64(),
+		"max_memory_mb":       plan.MaxMemoryMB.ValueInt64(),
+		"restart_policy":      plan.RestartPolicy.ValueString(),
+		"restart_max_retries": plan.RestartMaxRetries.ValueInt64(),
 	}
 
 	result, err := hosting.Put[daemonAPI](ctx, r.data.Client, "/api/v1/daemons/"+state.ID.ValueString(), body)
@@ -249,10 +257,11 @@ func mapDaemon(api *daemonAPI, state *webappDaemonModel, customerID string) {
 	state.Command = types.StringValue(api.Command)
 	state.ProxyPath = types.StringValue(api.ProxyPath)
 	state.ProxyPort = types.Int64Value(api.ProxyPort)
-	state.NumProcs = types.Int64Value(api.NumProcs)
 	state.StopSignal = types.StringValue(api.StopSignal)
 	state.StopWaitSecs = types.Int64Value(api.StopWaitSecs)
 	state.MaxMemoryMB = types.Int64Value(api.MaxMemoryMB)
+	state.RestartPolicy = types.StringValue(api.RestartPolicy)
+	state.RestartMaxRetries = types.Int64Value(api.RestartMaxRetries)
 	state.Enabled = types.BoolValue(api.Enabled)
 	state.Status = types.StringValue(api.Status)
 	if api.StatusMessage != nil {
