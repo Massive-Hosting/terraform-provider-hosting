@@ -1,19 +1,19 @@
 ---
-page_title: "hosting_webapp_cron_job Resource - terraform-provider-hosting"
+page_title: "hosting_website_cron_job Resource - terraform-provider-hosting"
 subcategory: ""
 description: |-
-  Manages a cron job for a webapp.
+  Manages a cron job for a website.
 ---
 
-# hosting_webapp_cron_job (Resource)
+# hosting_website_cron_job (Resource)
 
-Manages a scheduled cron job for a webapp.
+Manages a scheduled cron job for a website.
 
 ## Example Usage
 
 ```hcl
-resource "hosting_webapp_cron_job" "cleanup" {
-  webapp_id       = hosting_webapp.myapp.id
+resource "hosting_website_cron_job" "cleanup" {
+  website_id       = hosting_website.myapp.id
   schedule        = "0 2 * * *"
   command         = "php artisan schedule:run"
   timeout_seconds = 300
@@ -25,7 +25,7 @@ resource "hosting_webapp_cron_job" "cleanup" {
 
 ### Required
 
-- `webapp_id` (String) Webapp ID. Changing this forces a new resource.
+- `website_id` (String) Website ID. Changing this forces a new resource.
 - `schedule` (String) Cron schedule expression (e.g. `*/5 * * * *`).
 - `command` (String) Command to run.
 
@@ -46,5 +46,5 @@ resource "hosting_webapp_cron_job" "cleanup" {
 ## Import
 
 ```shell
-terraform import hosting_webapp_cron_job.cleanup cj_abc123
+terraform import hosting_website_cron_job.cleanup cj_abc123
 ```

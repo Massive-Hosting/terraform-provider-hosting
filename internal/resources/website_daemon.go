@@ -15,18 +15,18 @@ import (
 )
 
 var (
-	_ resource.Resource                = &webappDaemonResource{}
-	_ resource.ResourceWithImportState = &webappDaemonResource{}
+	_ resource.Resource                = &websiteDaemonResource{}
+	_ resource.ResourceWithImportState = &websiteDaemonResource{}
 )
 
-type webappDaemonResource struct {
+type websiteDaemonResource struct {
 	data *ProviderData
 }
 
-type webappDaemonModel struct {
+type websiteDaemonModel struct {
 	ID            types.String `tfsdk:"id"`
 	CustomerID    types.String `tfsdk:"customer_id"`
-	WebappID      types.String `tfsdk:"webapp_id"`
+	WebsiteID      types.String `tfsdk:"website_id"`
 	Command       types.String `tfsdk:"command"`
 	ProxyPath     types.String `tfsdk:"proxy_path"`
 	ProxyPort     types.Int64  `tfsdk:"proxy_port"`
@@ -42,7 +42,7 @@ type webappDaemonModel struct {
 
 type daemonAPI struct {
 	ID            string  `json:"id"`
-	WebappID      string  `json:"webapp_id"`
+	WebsiteID      string  `json:"website_id"`
 	Command       string  `json:"command"`
 	ProxyPath     string  `json:"proxy_path"`
 	ProxyPort     int64   `json:"proxy_port"`
@@ -56,17 +56,17 @@ type daemonAPI struct {
 	StatusMessage *string `json:"status_message"`
 }
 
-func NewWebappDaemon() resource.Resource {
-	return &webappDaemonResource{}
+func NewWebsiteDaemon() resource.Resource {
+	return &websiteDaemonResource{}
 }
 
-func (r *webappDaemonResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_webapp_daemon"
+func (r *websiteDaemonResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_website_daemon"
 }
 
-func (r *webappDaemonResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *websiteDaemonResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a daemon process for a webapp.",
+		Description: "Manages a daemon process for a website.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true, Description: "Daemon ID.",
@@ -76,8 +76,8 @@ func (r *webappDaemonResource) Schema(_ context.Context, _ resource.SchemaReques
 				Optional: true, Computed: true, Description: "Customer ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"webapp_id": schema.StringAttribute{
-				Required: true, Description: "Webapp ID.",
+			"website_id": schema.StringAttribute{
+				Required: true, Description: "Website ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"command": schema.StringAttribute{
@@ -124,7 +124,7 @@ func (r *webappDaemonResource) Schema(_ context.Context, _ resource.SchemaReques
 	}
 }
 
-func (r *webappDaemonResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *websiteDaemonResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -136,8 +136,8 @@ func (r *webappDaemonResource) Configure(_ context.Context, req resource.Configu
 	r.data = data
 }
 
-func (r *webappDaemonResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan webappDaemonModel
+func (r *websiteDaemonResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan websiteDaemonModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -160,7 +160,7 @@ func (r *webappDaemonResource) Create(ctx context.Context, req resource.CreateRe
 		"restart_max_retries": plan.RestartMaxRetries.ValueInt64(),
 	}
 
-	result, err := hosting.Post[daemonAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/daemons", plan.WebappID.ValueString()), body)
+	result, err := hosting.Post[daemonAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/daemons", plan.WebsiteID.ValueString()), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Daemon Failed", err.Error())
 		return
@@ -170,8 +170,8 @@ func (r *webappDaemonResource) Create(ctx context.Context, req resource.CreateRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappDaemonResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state webappDaemonModel
+func (r *websiteDaemonResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state websiteDaemonModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -192,14 +192,14 @@ func (r *webappDaemonResource) Read(ctx context.Context, req resource.ReadReques
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *webappDaemonResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan webappDaemonModel
+func (r *websiteDaemonResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan websiteDaemonModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state webappDaemonModel
+	var state websiteDaemonModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -227,8 +227,8 @@ func (r *webappDaemonResource) Update(ctx context.Context, req resource.UpdateRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappDaemonResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state webappDaemonModel
+func (r *websiteDaemonResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state websiteDaemonModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -239,21 +239,21 @@ func (r *webappDaemonResource) Delete(ctx context.Context, req resource.DeleteRe
 	}
 }
 
-func (r *webappDaemonResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *websiteDaemonResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	result, err := hosting.Get[daemonAPI](ctx, r.data.Client, "/api/v1/daemons/"+req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Import Daemon Failed", err.Error())
 		return
 	}
 
-	var state webappDaemonModel
+	var state websiteDaemonModel
 	mapDaemon(result, &state, r.data.CustomerID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func mapDaemon(api *daemonAPI, state *webappDaemonModel, customerID string) {
+func mapDaemon(api *daemonAPI, state *websiteDaemonModel, customerID string) {
 	state.ID = types.StringValue(api.ID)
-	state.WebappID = types.StringValue(api.WebappID)
+	state.WebsiteID = types.StringValue(api.WebsiteID)
 	state.Command = types.StringValue(api.Command)
 	state.ProxyPath = types.StringValue(api.ProxyPath)
 	state.ProxyPort = types.Int64Value(api.ProxyPort)

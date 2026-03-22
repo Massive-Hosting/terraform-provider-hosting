@@ -14,18 +14,18 @@ import (
 )
 
 var (
-	_ resource.Resource                = &webappCronJobResource{}
-	_ resource.ResourceWithImportState = &webappCronJobResource{}
+	_ resource.Resource                = &websiteCronJobResource{}
+	_ resource.ResourceWithImportState = &websiteCronJobResource{}
 )
 
-type webappCronJobResource struct {
+type websiteCronJobResource struct {
 	data *ProviderData
 }
 
-type webappCronJobModel struct {
+type websiteCronJobModel struct {
 	ID               types.String `tfsdk:"id"`
 	CustomerID       types.String `tfsdk:"customer_id"`
-	WebappID         types.String `tfsdk:"webapp_id"`
+	WebsiteID         types.String `tfsdk:"website_id"`
 	Schedule         types.String `tfsdk:"schedule"`
 	Command          types.String `tfsdk:"command"`
 	WorkingDirectory types.String `tfsdk:"working_directory"`
@@ -38,7 +38,7 @@ type webappCronJobModel struct {
 
 type cronJobAPI struct {
 	ID               string  `json:"id"`
-	WebappID         string  `json:"webapp_id"`
+	WebsiteID         string  `json:"website_id"`
 	Schedule         string  `json:"schedule"`
 	Command          string  `json:"command"`
 	WorkingDirectory string  `json:"working_directory"`
@@ -49,17 +49,17 @@ type cronJobAPI struct {
 	StatusMessage    *string `json:"status_message"`
 }
 
-func NewWebappCronJob() resource.Resource {
-	return &webappCronJobResource{}
+func NewWebsiteCronJob() resource.Resource {
+	return &websiteCronJobResource{}
 }
 
-func (r *webappCronJobResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_webapp_cron_job"
+func (r *websiteCronJobResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_website_cron_job"
 }
 
-func (r *webappCronJobResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *websiteCronJobResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a cron job for a webapp.",
+		Description: "Manages a cron job for a website.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true, Description: "Cron job ID.",
@@ -69,8 +69,8 @@ func (r *webappCronJobResource) Schema(_ context.Context, _ resource.SchemaReque
 				Optional: true, Computed: true, Description: "Customer ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"webapp_id": schema.StringAttribute{
-				Required: true, Description: "Webapp ID.",
+			"website_id": schema.StringAttribute{
+				Required: true, Description: "Website ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"schedule": schema.StringAttribute{
@@ -103,7 +103,7 @@ func (r *webappCronJobResource) Schema(_ context.Context, _ resource.SchemaReque
 	}
 }
 
-func (r *webappCronJobResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *websiteCronJobResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -115,8 +115,8 @@ func (r *webappCronJobResource) Configure(_ context.Context, req resource.Config
 	r.data = data
 }
 
-func (r *webappCronJobResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan webappCronJobModel
+func (r *websiteCronJobResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan websiteCronJobModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -138,7 +138,7 @@ func (r *webappCronJobResource) Create(ctx context.Context, req resource.CreateR
 		body["working_directory"] = plan.WorkingDirectory.ValueString()
 	}
 
-	result, err := hosting.Post[cronJobAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/cron-jobs", plan.WebappID.ValueString()), body)
+	result, err := hosting.Post[cronJobAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/cron-jobs", plan.WebsiteID.ValueString()), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Create Cron Job Failed", err.Error())
 		return
@@ -148,8 +148,8 @@ func (r *webappCronJobResource) Create(ctx context.Context, req resource.CreateR
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappCronJobResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state webappCronJobModel
+func (r *websiteCronJobResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state websiteCronJobModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -170,14 +170,14 @@ func (r *webappCronJobResource) Read(ctx context.Context, req resource.ReadReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *webappCronJobResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan webappCronJobModel
+func (r *websiteCronJobResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan websiteCronJobModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state webappCronJobModel
+	var state websiteCronJobModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -204,8 +204,8 @@ func (r *webappCronJobResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappCronJobResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state webappCronJobModel
+func (r *websiteCronJobResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state websiteCronJobModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -216,21 +216,21 @@ func (r *webappCronJobResource) Delete(ctx context.Context, req resource.DeleteR
 	}
 }
 
-func (r *webappCronJobResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *websiteCronJobResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	result, err := hosting.Get[cronJobAPI](ctx, r.data.Client, "/api/v1/cron-jobs/"+req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Import Cron Job Failed", err.Error())
 		return
 	}
 
-	var state webappCronJobModel
+	var state websiteCronJobModel
 	mapCronJob(result, &state, r.data.CustomerID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func mapCronJob(api *cronJobAPI, state *webappCronJobModel, customerID string) {
+func mapCronJob(api *cronJobAPI, state *websiteCronJobModel, customerID string) {
 	state.ID = types.StringValue(api.ID)
-	state.WebappID = types.StringValue(api.WebappID)
+	state.WebsiteID = types.StringValue(api.WebsiteID)
 	state.Schedule = types.StringValue(api.Schedule)
 	state.Command = types.StringValue(api.Command)
 	state.WorkingDirectory = types.StringValue(api.WorkingDirectory)

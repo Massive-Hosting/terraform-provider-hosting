@@ -79,7 +79,7 @@ func (r *webhookEndpointResource) Schema(_ context.Context, _ resource.SchemaReq
 			"events": schema.ListAttribute{
 				Required:    true,
 				ElementType: types.StringType,
-				Description: "Event types to subscribe to (deploy.success, deploy.failed, backup.completed, ssl.expiring, cron.failed, webapp.status_changed).",
+				Description: "Event types to subscribe to (deploy.success, deploy.failed, backup.completed, ssl.expiring, cron.failed, website.status_changed).",
 			},
 			"enabled": schema.BoolAttribute{
 				Optional: true, Computed: true, Description: "Whether the endpoint is enabled.",

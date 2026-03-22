@@ -38,7 +38,7 @@ func (p *hostingProvider) Metadata(_ context.Context, _ provider.MetadataRequest
 
 func (p *hostingProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manage hosting resources (webapps, databases, DNS, containers, etc.) via the control panel API.",
+		Description: "Manage hosting resources (websites, databases, DNS, containers, etc.) via the control panel API.",
 		Attributes: map[string]schema.Attribute{
 			"api_url": schema.StringAttribute{
 				Description: "Base URL of the control panel API. Can also be set via HOSTING_API_URL environment variable.",
@@ -85,7 +85,7 @@ func (p *hostingProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 func (p *hostingProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		resources.NewWebapp,
+		resources.NewWebsite,
 		resources.NewDatabase,
 		resources.NewDatabaseUser,
 		resources.NewValkey,
@@ -102,10 +102,10 @@ func (p *hostingProvider) Resources(_ context.Context) []func() resource.Resourc
 		resources.NewSSHKey,
 		resources.NewContainer,
 		resources.NewEgressRule,
-		resources.NewWebappEnvVars,
+		resources.NewWebsiteEnvVars,
 		resources.NewContainerEnvVars,
-		resources.NewWebappDaemon,
-		resources.NewWebappCronJob,
+		resources.NewWebsiteDaemon,
+		resources.NewWebsiteCronJob,
 		resources.NewPreviewConfig,
 		resources.NewUptimeMonitor,
 		resources.NewWebhookEndpoint,

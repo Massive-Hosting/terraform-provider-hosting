@@ -1,18 +1,18 @@
 ---
-page_title: "hosting_webapp Resource - terraform-provider-hosting"
+page_title: "hosting_website Resource - terraform-provider-hosting"
 subcategory: ""
 description: |-
   Manages a web application.
 ---
 
-# hosting_webapp (Resource)
+# hosting_website (Resource)
 
 Manages a web application. Supports PHP, Node.js, Python, Ruby, Go, Java, and static sites.
 
 ## Example Usage
 
 ```hcl
-resource "hosting_webapp" "myapp" {
+resource "hosting_website" "myapp" {
   tenant_id       = var.tenant_id
   runtime         = "php"
   runtime_version = "8.4"
@@ -52,12 +52,12 @@ resource "hosting_webapp" "myapp" {
 
 ### Read-Only
 
-- `id` (String) Webapp ID.
+- `id` (String) Website ID.
 - `env_file_name` (String) Environment file name.
 - `status` (String) Current status.
 
 ## Import
 
 ```shell
-terraform import hosting_webapp.myapp wp_abc123
+terraform import hosting_website.myapp wp_abc123
 ```

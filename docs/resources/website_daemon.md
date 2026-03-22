@@ -1,27 +1,27 @@
 ---
-page_title: "hosting_webapp_daemon Resource - terraform-provider-hosting"
+page_title: "hosting_website_daemon Resource - terraform-provider-hosting"
 subcategory: ""
 description: |-
-  Manages a daemon process for a webapp.
+  Manages a daemon process for a website.
 ---
 
-# hosting_webapp_daemon (Resource)
+# hosting_website_daemon (Resource)
 
-Manages a long-running daemon process for a webapp. Daemons can optionally proxy HTTP traffic via a path prefix.
+Manages a long-running daemon process for a website. Daemons can optionally proxy HTTP traffic via a path prefix.
 
 ## Example Usage
 
 ```hcl
-resource "hosting_webapp_daemon" "worker" {
-  webapp_id      = hosting_webapp.myapp.id
+resource "hosting_website_daemon" "worker" {
+  website_id      = hosting_website.myapp.id
   command        = "php artisan queue:work --tries=3"
   max_memory_mb  = 256
   stop_signal    = "TERM"
   stop_wait_secs = 30
 }
 
-resource "hosting_webapp_daemon" "api" {
-  webapp_id  = hosting_webapp.myapp.id
+resource "hosting_website_daemon" "api" {
+  website_id  = hosting_website.myapp.id
   command    = "node server.js"
   proxy_path = "/api"
   proxy_port = 3000
@@ -32,7 +32,7 @@ resource "hosting_webapp_daemon" "api" {
 
 ### Required
 
-- `webapp_id` (String) Webapp ID. Changing this forces a new resource.
+- `website_id` (String) Website ID. Changing this forces a new resource.
 - `command` (String) Command to run.
 
 ### Optional
@@ -54,5 +54,5 @@ resource "hosting_webapp_daemon" "api" {
 ## Import
 
 ```shell
-terraform import hosting_webapp_daemon.worker dm_abc123
+terraform import hosting_website_daemon.worker dm_abc123
 ```

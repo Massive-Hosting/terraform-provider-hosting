@@ -2,18 +2,18 @@
 page_title: "hosting_preview_config Resource - terraform-provider-hosting"
 subcategory: ""
 description: |-
-  Manages a preview environment configuration for a webapp.
+  Manages a preview environment configuration for a website.
 ---
 
 # hosting_preview_config (Resource)
 
-Manages a preview environment configuration for a webapp. When configured with a GitHub App, pull requests automatically get ephemeral preview environments with their own webapp, optional database, Valkey, S3, and customized environment variables.
+Manages a preview environment configuration for a website. When configured with a GitHub App, pull requests automatically get ephemeral preview environments with their own website, optional database, Valkey, S3, and customized environment variables.
 
 ## Example Usage
 
 ```hcl
 resource "hosting_preview_config" "app" {
-  webapp_id              = hosting_webapp.app.id
+  website_id              = hosting_website.app.id
   github_repo_owner      = "my-org"
   github_repo_name       = "my-app"
   github_installation_id = 12345678
@@ -37,7 +37,7 @@ resource "hosting_preview_config" "app" {
 
 ### Required
 
-- `webapp_id` (String) Webapp ID. Changing this forces a new resource.
+- `website_id` (String) Website ID. Changing this forces a new resource.
 - `github_repo_owner` (String) GitHub repository owner (organization or user).
 - `github_repo_name` (String) GitHub repository name.
 - `github_installation_id` (Number) GitHub App installation ID.
@@ -63,8 +63,8 @@ resource "hosting_preview_config" "app" {
 
 ## Import
 
-Import by webapp ID:
+Import by website ID:
 
 ```shell
-terraform import hosting_preview_config.app <webapp-id>
+terraform import hosting_preview_config.app <website-id>
 ```

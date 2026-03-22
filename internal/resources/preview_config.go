@@ -27,7 +27,7 @@ type previewConfigResource struct {
 
 type previewConfigModel struct {
 	ID                   types.String `tfsdk:"id"`
-	WebappID             types.String `tfsdk:"webapp_id"`
+	WebsiteID             types.String `tfsdk:"website_id"`
 	Enabled              types.Bool   `tfsdk:"enabled"`
 	GitHubRepoOwner      types.String `tfsdk:"github_repo_owner"`
 	GitHubRepoName       types.String `tfsdk:"github_repo_name"`
@@ -45,7 +45,7 @@ type previewConfigModel struct {
 
 type previewConfigAPI struct {
 	ID                   string              `json:"id"`
-	WebappID             string              `json:"webapp_id"`
+	WebsiteID             string              `json:"website_id"`
 	Enabled              bool                `json:"enabled"`
 	GitHubRepoOwner      string              `json:"github_repo_owner"`
 	GitHubRepoName       string              `json:"github_repo_name"`
@@ -80,7 +80,7 @@ func (r *previewConfigResource) Metadata(_ context.Context, req resource.Metadat
 
 func (r *previewConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a preview environment configuration for a webapp.",
+		Description: "Manages a preview environment configuration for a website.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -89,9 +89,9 @@ func (r *previewConfigResource) Schema(_ context.Context, _ resource.SchemaReque
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"webapp_id": schema.StringAttribute{
+			"website_id": schema.StringAttribute{
 				Required:    true,
-				Description: "Webapp ID to attach preview config to.",
+				Description: "Website ID to attach preview config to.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -196,7 +196,7 @@ func (r *previewConfigResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	result, err := hosting.Put[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/preview-config", plan.WebappID.ValueString()), r.buildBody(&plan))
+	result, err := hosting.Put[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/preview-config", plan.WebsiteID.ValueString()), r.buildBody(&plan))
 	if err != nil {
 		resp.Diagnostics.AddError("Create Preview Config Failed", err.Error())
 		return
@@ -213,7 +213,7 @@ func (r *previewConfigResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	result, err := hosting.Get[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/preview-config", state.WebappID.ValueString()))
+	result, err := hosting.Get[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/preview-config", state.WebsiteID.ValueString()))
 	if err != nil {
 		if hosting.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
@@ -234,7 +234,7 @@ func (r *previewConfigResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	result, err := hosting.Put[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/preview-config", plan.WebappID.ValueString()), r.buildBody(&plan))
+	result, err := hosting.Put[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/preview-config", plan.WebsiteID.ValueString()), r.buildBody(&plan))
 	if err != nil {
 		resp.Diagnostics.AddError("Update Preview Config Failed", err.Error())
 		return
@@ -251,22 +251,22 @@ func (r *previewConfigResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	if err := r.data.Client.Delete(ctx, fmt.Sprintf("/api/v1/webapps/%s/preview-config", state.WebappID.ValueString())); err != nil {
+	if err := r.data.Client.Delete(ctx, fmt.Sprintf("/api/v1/websites/%s/preview-config", state.WebsiteID.ValueString())); err != nil {
 		resp.Diagnostics.AddError("Delete Preview Config Failed", err.Error())
 	}
 }
 
 func (r *previewConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	webappID := req.ID
+	websiteID := req.ID
 
-	result, err := hosting.Get[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/preview-config", webappID))
+	result, err := hosting.Get[previewConfigAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/preview-config", websiteID))
 	if err != nil {
 		resp.Diagnostics.AddError("Import Preview Config Failed", err.Error())
 		return
 	}
 
 	var state previewConfigModel
-	state.WebappID = types.StringValue(webappID)
+	state.WebsiteID = types.StringValue(websiteID)
 	r.mapToState(result, &state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -312,7 +312,7 @@ func (r *previewConfigResource) buildBody(plan *previewConfigModel) map[string]a
 
 func (r *previewConfigResource) mapToState(api *previewConfigAPI, state *previewConfigModel) {
 	state.ID = types.StringValue(api.ID)
-	state.WebappID = types.StringValue(api.WebappID)
+	state.WebsiteID = types.StringValue(api.WebsiteID)
 	state.Enabled = types.BoolValue(api.Enabled)
 	state.GitHubRepoOwner = types.StringValue(api.GitHubRepoOwner)
 	state.GitHubRepoName = types.StringValue(api.GitHubRepoName)

@@ -18,7 +18,7 @@ resource "hosting_webhook_endpoint" "deploy" {
 - `tenant_id` - (Required, Forces new resource) The tenant ID.
 - `url` - (Required) The URL to receive webhook POST requests.
 - `description` - (Optional) Human-readable description.
-- `events` - (Required) List of event types to subscribe to. Valid values: `deploy.success`, `deploy.failed`, `backup.completed`, `ssl.expiring`, `cron.failed`, `webapp.status_changed`.
+- `events` - (Required) List of event types to subscribe to. Valid values: `deploy.success`, `deploy.failed`, `backup.completed`, `ssl.expiring`, `cron.failed`, `website.status_changed`.
 - `enabled` - (Optional, Default: `true`) Whether the endpoint is enabled.
 - `customer_id` - (Optional) Customer ID. Falls back to provider-level `customer_id`.
 

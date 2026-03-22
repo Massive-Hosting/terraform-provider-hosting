@@ -27,7 +27,7 @@ variable "tenant_id" {
 
 # ─── Web Application ───────────────────────────────────────────────
 
-resource "hosting_webapp" "myapp" {
+resource "hosting_website" "myapp" {
   tenant_id       = var.tenant_id
   runtime         = "php"
   runtime_version = "8.4"
@@ -44,8 +44,8 @@ resource "hosting_webapp" "myapp" {
   rate_limit_burst   = 200
 }
 
-resource "hosting_webapp_env_vars" "myapp" {
-  webapp_id = hosting_webapp.myapp.id
+resource "hosting_website_env_vars" "myapp" {
+  website_id = hosting_website.myapp.id
 
   vars = {
     APP_ENV   = "production"
@@ -59,14 +59,14 @@ resource "hosting_webapp_env_vars" "myapp" {
   }
 }
 
-resource "hosting_webapp_daemon" "worker" {
-  webapp_id     = hosting_webapp.myapp.id
+resource "hosting_website_daemon" "worker" {
+  website_id     = hosting_website.myapp.id
   command       = "php artisan queue:work --tries=3"
   max_memory_mb = 256
 }
 
-resource "hosting_webapp_cron_job" "scheduler" {
-  webapp_id       = hosting_webapp.myapp.id
+resource "hosting_website_cron_job" "scheduler" {
+  website_id       = hosting_website.myapp.id
   schedule        = "* * * * *"
   command         = "php artisan schedule:run"
   timeout_seconds = 60
@@ -87,7 +87,7 @@ resource "hosting_database_user" "myuser" {
 
 resource "hosting_fqdn" "main" {
   fqdn        = "myapp.example.com"
-  webapp_id   = hosting_webapp.myapp.id
+  website_id   = hosting_website.myapp.id
   ssl_enabled = true
 }
 
@@ -161,7 +161,7 @@ resource "hosting_email_forward" "backup" {
 # ─── Preview Environments ──────────────────────────────────────────
 
 resource "hosting_preview_config" "myapp" {
-  webapp_id              = hosting_webapp.myapp.id
+  website_id              = hosting_website.myapp.id
   github_repo_owner      = "my-org"
   github_repo_name       = "my-app"
   github_installation_id = 12345678
@@ -273,8 +273,8 @@ variable "viewer_user_id" {
 
 # ─── Outputs ───────────────────────────────────────────────────────
 
-output "webapp_status" {
-  value = hosting_webapp.myapp.status
+output "website_status" {
+  value = hosting_website.myapp.status
 }
 
 output "database_user" {

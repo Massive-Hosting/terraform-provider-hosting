@@ -16,15 +16,15 @@ import (
 )
 
 var (
-	_ resource.Resource                = &webappResource{}
-	_ resource.ResourceWithImportState = &webappResource{}
+	_ resource.Resource                = &websiteResource{}
+	_ resource.ResourceWithImportState = &websiteResource{}
 )
 
-type webappResource struct {
+type websiteResource struct {
 	data *ProviderData
 }
 
-type webappModel struct {
+type websiteModel struct {
 	ID                     types.String `tfsdk:"id"`
 	CustomerID             types.String `tfsdk:"customer_id"`
 	TenantID               types.String `tfsdk:"tenant_id"`
@@ -46,7 +46,7 @@ type webappModel struct {
 	Status                 types.String `tfsdk:"status"`
 }
 
-type webappAPI struct {
+type websiteAPI struct {
 	ID                     string `json:"id"`
 	TenantID               string `json:"tenant_id"`
 	Folder                 string `json:"folder"`
@@ -67,21 +67,21 @@ type webappAPI struct {
 	Status                 string `json:"status"`
 }
 
-func NewWebapp() resource.Resource {
-	return &webappResource{}
+func NewWebsite() resource.Resource {
+	return &websiteResource{}
 }
 
-func (r *webappResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_webapp"
+func (r *websiteResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_website"
 }
 
-func (r *webappResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *websiteResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages a web application.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "Webapp ID.",
+				Description: "Website ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -105,7 +105,7 @@ func (r *webappResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"folder": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Human-readable folder name for the webapp on disk. Immutable after creation. Auto-generated if not provided.",
+				Description: "Human-readable folder name for the website on disk. Immutable after creation. Auto-generated if not provided.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 					stringplanmodifier.UseStateForUnknown(),
@@ -197,7 +197,7 @@ func (r *webappResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	}
 }
 
-func (r *webappResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *websiteResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -209,8 +209,8 @@ func (r *webappResource) Configure(_ context.Context, req resource.ConfigureRequ
 	r.data = data
 }
 
-func (r *webappResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan webappModel
+func (r *websiteResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan websiteModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -265,16 +265,16 @@ func (r *webappResource) Create(ctx context.Context, req resource.CreateRequest,
 		body["cdn_config"] = plan.CdnConfig.ValueString()
 	}
 
-	result, err := hosting.Post[webappAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/webapps", customerID), body)
+	result, err := hosting.Post[websiteAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/websites", customerID), body)
 	if err != nil {
-		resp.Diagnostics.AddError("Create Webapp Failed", err.Error())
+		resp.Diagnostics.AddError("Create Website Failed", err.Error())
 		return
 	}
 
 	// Wait for active status
-	final, err := waitForActive[webappAPI](ctx, r.data.Client, "/api/v1/webapps/"+result.ID, func(w *webappAPI) string { return w.Status })
+	final, err := waitForActive[websiteAPI](ctx, r.data.Client, "/api/v1/websites/"+result.ID, func(w *websiteAPI) string { return w.Status })
 	if err != nil {
-		resp.Diagnostics.AddWarning("Webapp Not Yet Active", err.Error())
+		resp.Diagnostics.AddWarning("Website Not Yet Active", err.Error())
 		final = result
 	}
 
@@ -282,20 +282,20 @@ func (r *webappResource) Create(ctx context.Context, req resource.CreateRequest,
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state webappModel
+func (r *websiteResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state websiteModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	result, err := hosting.Get[webappAPI](ctx, r.data.Client, "/api/v1/webapps/"+state.ID.ValueString())
+	result, err := hosting.Get[websiteAPI](ctx, r.data.Client, "/api/v1/websites/"+state.ID.ValueString())
 	if err != nil {
 		if hosting.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError("Read Webapp Failed", err.Error())
+		resp.Diagnostics.AddError("Read Website Failed", err.Error())
 		return
 	}
 
@@ -303,14 +303,14 @@ func (r *webappResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *webappResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan webappModel
+func (r *websiteResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan websiteModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state webappModel
+	var state websiteModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -344,9 +344,9 @@ func (r *webappResource) Update(ctx context.Context, req resource.UpdateRequest,
 		body["waf_exclusions"] = []int{}
 	}
 
-	result, err := hosting.Put[webappAPI](ctx, r.data.Client, "/api/v1/webapps/"+state.ID.ValueString(), body)
+	result, err := hosting.Put[websiteAPI](ctx, r.data.Client, "/api/v1/websites/"+state.ID.ValueString(), body)
 	if err != nil {
-		resp.Diagnostics.AddError("Update Webapp Failed", err.Error())
+		resp.Diagnostics.AddError("Update Website Failed", err.Error())
 		return
 	}
 
@@ -354,31 +354,31 @@ func (r *webappResource) Update(ctx context.Context, req resource.UpdateRequest,
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state webappModel
+func (r *websiteResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state websiteModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Webapps don't have a delete endpoint — they're removed by deleting the tenant.
+	// Websites don't have a delete endpoint — they're removed by deleting the tenant.
 	// For now, we just remove from state.
-	resp.Diagnostics.AddWarning("Webapp Removal", "Webapps cannot be individually deleted. Removed from Terraform state only.")
+	resp.Diagnostics.AddWarning("Website Removal", "Websites cannot be individually deleted. Removed from Terraform state only.")
 }
 
-func (r *webappResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	result, err := hosting.Get[webappAPI](ctx, r.data.Client, "/api/v1/webapps/"+req.ID)
+func (r *websiteResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	result, err := hosting.Get[websiteAPI](ctx, r.data.Client, "/api/v1/websites/"+req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Import Webapp Failed", err.Error())
+		resp.Diagnostics.AddError("Import Website Failed", err.Error())
 		return
 	}
 
-	var state webappModel
+	var state websiteModel
 	r.mapToState(result, &state, r.data.CustomerID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *webappResource) mapToState(api *webappAPI, state *webappModel, customerID string) {
+func (r *websiteResource) mapToState(api *websiteAPI, state *websiteModel, customerID string) {
 	state.ID = types.StringValue(api.ID)
 	state.TenantID = types.StringValue(api.TenantID)
 	state.Folder = types.StringValue(api.Folder)
@@ -408,7 +408,7 @@ func (r *webappResource) mapToState(api *webappAPI, state *webappModel, customer
 	}
 }
 
-func (r *webappResource) resolveCustomerID(v types.String) string {
+func (r *websiteResource) resolveCustomerID(v types.String) string {
 	if !v.IsNull() && !v.IsUnknown() {
 		return v.ValueString()
 	}

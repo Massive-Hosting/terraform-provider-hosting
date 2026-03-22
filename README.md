@@ -1,6 +1,6 @@
 # Terraform Provider: Hosting Platform
 
-Terraform provider for managing resources on the [Hosting Platform](https://massive-hosting.com). Supports webapps, databases, DNS, S3 storage, email, containers, VPN, and more.
+Terraform provider for managing resources on the [Hosting Platform](https://massive-hosting.com). Supports websites, databases, DNS, S3 storage, email, containers, VPN, and more.
 
 ## Requirements
 
@@ -32,8 +32,8 @@ provider "hosting" {
 ## Quick Start
 
 ```hcl
-# Create a PHP webapp
-resource "hosting_webapp" "myapp" {
+# Create a PHP website
+resource "hosting_website" "myapp" {
   tenant_id       = var.tenant_id
   runtime         = "php"
   runtime_version = "8.4"
@@ -51,8 +51,8 @@ resource "hosting_database_user" "myuser" {
 }
 
 # Set environment variables
-resource "hosting_webapp_env_vars" "myapp" {
-  webapp_id = hosting_webapp.myapp.id
+resource "hosting_website_env_vars" "myapp" {
+  website_id = hosting_website.myapp.id
 
   vars = {
     APP_ENV = "production"
@@ -67,7 +67,7 @@ resource "hosting_webapp_env_vars" "myapp" {
 # Attach a custom domain with SSL
 resource "hosting_fqdn" "main" {
   fqdn        = "myapp.example.com"
-  webapp_id   = hosting_webapp.myapp.id
+  website_id   = hosting_website.myapp.id
   ssl_enabled = true
 }
 ```
@@ -76,10 +76,10 @@ resource "hosting_fqdn" "main" {
 
 | Resource | Description |
 |---|---|
-| `hosting_webapp` | Web application (PHP, Node.js, Python, Ruby, Go, static) |
-| `hosting_webapp_env_vars` | Webapp environment variables (bulk) |
-| `hosting_webapp_daemon` | Long-running daemon process |
-| `hosting_webapp_cron_job` | Scheduled cron job |
+| `hosting_website` | Web application (PHP, Node.js, Python, Ruby, Go, static) |
+| `hosting_website_env_vars` | Website environment variables (bulk) |
+| `hosting_website_daemon` | Long-running daemon process |
+| `hosting_website_cron_job` | Scheduled cron job |
 | `hosting_database` | MySQL database |
 | `hosting_database_user` | MySQL database user |
 | `hosting_valkey` | Valkey (Redis) instance |
@@ -109,7 +109,7 @@ See the [docs/](docs/) directory for full documentation on each resource.
 Most resources support `terraform import`:
 
 ```bash
-terraform import hosting_webapp.myapp wp_abc123
+terraform import hosting_website.myapp wp_abc123
 terraform import hosting_database.mydb db_xyz789
 terraform import hosting_database_user.myuser db_xyz789/dbu_123456
 ```

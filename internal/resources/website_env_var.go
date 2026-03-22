@@ -13,16 +13,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ resource.Resource = &webappEnvVarsResource{}
+var _ resource.Resource = &websiteEnvVarsResource{}
 
-type webappEnvVarsResource struct {
+type websiteEnvVarsResource struct {
 	data *ProviderData
 }
 
-type webappEnvVarsModel struct {
+type websiteEnvVarsModel struct {
 	ID         types.String `tfsdk:"id"`
 	CustomerID types.String `tfsdk:"customer_id"`
-	WebappID   types.String `tfsdk:"webapp_id"`
+	WebsiteID   types.String `tfsdk:"website_id"`
 	Vars       types.Map    `tfsdk:"vars"`
 	SecretVars types.Map    `tfsdk:"secret_vars"`
 }
@@ -39,28 +39,28 @@ type setEnvVarEntry struct {
 	Secret bool   `json:"secret"`
 }
 
-func NewWebappEnvVars() resource.Resource {
-	return &webappEnvVarsResource{}
+func NewWebsiteEnvVars() resource.Resource {
+	return &websiteEnvVarsResource{}
 }
 
-func (r *webappEnvVarsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_webapp_env_vars"
+func (r *websiteEnvVarsResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_website_env_vars"
 }
 
-func (r *webappEnvVarsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *websiteEnvVarsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages environment variables for a webapp. This resource manages ALL env vars for the webapp — any vars not included will be removed.",
+		Description: "Manages environment variables for a website. This resource manages ALL env vars for the website — any vars not included will be removed.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true, Description: "Resource ID (same as webapp_id).",
+				Computed: true, Description: "Resource ID (same as website_id).",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"customer_id": schema.StringAttribute{
 				Optional: true, Computed: true, Description: "Customer ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"webapp_id": schema.StringAttribute{
-				Required: true, Description: "Webapp ID.",
+			"website_id": schema.StringAttribute{
+				Required: true, Description: "Website ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"vars": schema.MapAttribute{
@@ -76,7 +76,7 @@ func (r *webappEnvVarsResource) Schema(_ context.Context, _ resource.SchemaReque
 	}
 }
 
-func (r *webappEnvVarsResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *websiteEnvVarsResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -88,8 +88,8 @@ func (r *webappEnvVarsResource) Configure(_ context.Context, req resource.Config
 	r.data = data
 }
 
-func (r *webappEnvVarsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan webappEnvVarsModel
+func (r *websiteEnvVarsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan websiteEnvVarsModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -107,24 +107,24 @@ func (r *webappEnvVarsResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	if err := r.setEnvVars(ctx, plan.WebappID.ValueString(), entries); err != nil {
+	if err := r.setEnvVars(ctx, plan.WebsiteID.ValueString(), entries); err != nil {
 		resp.Diagnostics.AddError("Set Env Vars Failed", err.Error())
 		return
 	}
 
-	plan.ID = plan.WebappID
+	plan.ID = plan.WebsiteID
 	plan.CustomerID = types.StringValue(customerID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappEnvVarsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state webappEnvVarsModel
+func (r *websiteEnvVarsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state websiteEnvVarsModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	items, err := hosting.List[envVarAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/webapps/%s/env-vars", state.WebappID.ValueString()))
+	items, err := hosting.List[envVarAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/env-vars", state.WebsiteID.ValueString()))
 	if err != nil {
 		if hosting.IsNotFound(err) {
 			resp.State.RemoveResource(ctx)
@@ -182,14 +182,14 @@ func (r *webappEnvVarsResource) Read(ctx context.Context, req resource.ReadReque
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *webappEnvVarsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan webappEnvVarsModel
+func (r *websiteEnvVarsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan websiteEnvVarsModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state webappEnvVarsModel
+	var state websiteEnvVarsModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -201,7 +201,7 @@ func (r *webappEnvVarsResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	if err := r.setEnvVars(ctx, plan.WebappID.ValueString(), entries); err != nil {
+	if err := r.setEnvVars(ctx, plan.WebsiteID.ValueString(), entries); err != nil {
 		resp.Diagnostics.AddError("Set Env Vars Failed", err.Error())
 		return
 	}
@@ -211,20 +211,20 @@ func (r *webappEnvVarsResource) Update(ctx context.Context, req resource.UpdateR
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *webappEnvVarsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state webappEnvVarsModel
+func (r *websiteEnvVarsResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state websiteEnvVarsModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Set empty vars to remove all.
-	if err := r.setEnvVars(ctx, state.WebappID.ValueString(), []setEnvVarEntry{}); err != nil {
+	if err := r.setEnvVars(ctx, state.WebsiteID.ValueString(), []setEnvVarEntry{}); err != nil {
 		resp.Diagnostics.AddError("Delete Env Vars Failed", err.Error())
 	}
 }
 
-func (r *webappEnvVarsResource) buildEntries(ctx context.Context, plan webappEnvVarsModel) ([]setEnvVarEntry, diag.Diagnostics) {
+func (r *websiteEnvVarsResource) buildEntries(ctx context.Context, plan websiteEnvVarsModel) ([]setEnvVarEntry, diag.Diagnostics) {
 	var entries []setEnvVarEntry
 	var diags diag.Diagnostics
 
@@ -247,8 +247,8 @@ func (r *webappEnvVarsResource) buildEntries(ctx context.Context, plan webappEnv
 	return entries, diags
 }
 
-func (r *webappEnvVarsResource) setEnvVars(ctx context.Context, webappID string, entries []setEnvVarEntry) error {
-	_, err := r.data.Client.Do(ctx, "PUT", fmt.Sprintf("/api/v1/webapps/%s/env-vars", webappID), map[string]any{
+func (r *websiteEnvVarsResource) setEnvVars(ctx context.Context, websiteID string, entries []setEnvVarEntry) error {
+	_, err := r.data.Client.Do(ctx, "PUT", fmt.Sprintf("/api/v1/websites/%s/env-vars", websiteID), map[string]any{
 		"vars": entries,
 	})
 	if err != nil {

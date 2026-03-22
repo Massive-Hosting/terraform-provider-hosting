@@ -2,12 +2,12 @@
 page_title: "Hosting Provider"
 subcategory: ""
 description: |-
-  Manage hosting resources (webapps, databases, DNS, containers, etc.) via the control panel API.
+  Manage hosting resources (websites, databases, DNS, containers, etc.) via the control panel API.
 ---
 
 # Hosting Provider
 
-The Hosting provider manages infrastructure on the Massive Hosting platform. It supports webapps, databases, DNS zones, S3 storage, email, containers, VPN peers, and more.
+The Hosting provider manages infrastructure on the Massive Hosting platform. It supports websites, databases, DNS zones, S3 storage, email, containers, VPN peers, and more.
 
 ## Authentication
 

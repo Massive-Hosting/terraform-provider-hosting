@@ -26,7 +26,7 @@ type fqdnModel struct {
 	ID         types.String `tfsdk:"id"`
 	CustomerID types.String `tfsdk:"customer_id"`
 	FQDN       types.String `tfsdk:"fqdn"`
-	WebappID   types.String `tfsdk:"webapp_id"`
+	WebsiteID   types.String `tfsdk:"website_id"`
 	SSLEnabled types.Bool   `tfsdk:"ssl_enabled"`
 	Status     types.String `tfsdk:"status"`
 }
@@ -35,7 +35,7 @@ type fqdnAPI struct {
 	ID         string  `json:"id"`
 	AccountID  string  `json:"account_id"`
 	FQDN       string  `json:"fqdn"`
-	WebappID   *string `json:"webapp_id"`
+	WebsiteID   *string `json:"website_id"`
 	SSLEnabled bool    `json:"ssl_enabled"`
 	Status     string  `json:"status"`
 }
@@ -64,8 +64,8 @@ func (r *fqdnResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Required: true, Description: "Fully qualified domain name.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"webapp_id": schema.StringAttribute{
-				Optional: true, Description: "Webapp ID to attach this FQDN to.",
+			"website_id": schema.StringAttribute{
+				Optional: true, Description: "Website ID to attach this FQDN to.",
 			},
 			"ssl_enabled": schema.BoolAttribute{
 				Optional: true, Computed: true, Description: "Enable SSL certificate.",
@@ -107,8 +107,8 @@ func (r *fqdnResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"fqdn":        plan.FQDN.ValueString(),
 		"ssl_enabled": plan.SSLEnabled.ValueBool(),
 	}
-	if !plan.WebappID.IsNull() && !plan.WebappID.IsUnknown() {
-		body["webapp_id"] = plan.WebappID.ValueString()
+	if !plan.WebsiteID.IsNull() && !plan.WebsiteID.IsUnknown() {
+		body["website_id"] = plan.WebsiteID.ValueString()
 	}
 
 	result, err := hosting.Post[fqdnAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/hostnames", customerID), body)
@@ -164,10 +164,10 @@ func (r *fqdnResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	body := map[string]any{
 		"ssl_enabled": plan.SSLEnabled.ValueBool(),
 	}
-	if !plan.WebappID.IsNull() && !plan.WebappID.IsUnknown() {
-		body["webapp_id"] = plan.WebappID.ValueString()
+	if !plan.WebsiteID.IsNull() && !plan.WebsiteID.IsUnknown() {
+		body["website_id"] = plan.WebsiteID.ValueString()
 	} else {
-		body["webapp_id"] = nil
+		body["website_id"] = nil
 	}
 
 	result, err := hosting.Put[fqdnAPI](ctx, r.data.Client, "/api/v1/hostnames/"+state.ID.ValueString(), body)
@@ -208,10 +208,10 @@ func (r *fqdnResource) mapToState(api *fqdnAPI, state *fqdnModel, customerID str
 	state.FQDN = types.StringValue(api.FQDN)
 	state.SSLEnabled = types.BoolValue(api.SSLEnabled)
 	state.Status = types.StringValue(api.Status)
-	if api.WebappID != nil {
-		state.WebappID = types.StringValue(*api.WebappID)
+	if api.WebsiteID != nil {
+		state.WebsiteID = types.StringValue(*api.WebsiteID)
 	} else {
-		state.WebappID = types.StringNull()
+		state.WebsiteID = types.StringNull()
 	}
 	if customerID != "" {
 		state.CustomerID = types.StringValue(customerID)
