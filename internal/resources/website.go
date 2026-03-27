@@ -32,7 +32,6 @@ type websiteModel struct {
 	Runtime                types.String `tfsdk:"runtime"`
 	RuntimeVersion         types.String `tfsdk:"runtime_version"`
 	PublicFolder           types.String `tfsdk:"public_folder"`
-	EnvFileName            types.String `tfsdk:"env_file_name"`
 	ServiceHostnameEnabled types.Bool   `tfsdk:"service_hostname_enabled"`
 	WafEnabled             types.Bool   `tfsdk:"waf_enabled"`
 	WafMode                types.String `tfsdk:"waf_mode"`
@@ -53,7 +52,6 @@ type websiteAPI struct {
 	Runtime                string `json:"runtime"`
 	RuntimeVersion         string `json:"runtime_version"`
 	PublicFolder           string `json:"public_folder"`
-	EnvFileName            string `json:"env_file_name"`
 	ServiceHostnameEnabled bool   `json:"service_hostname_enabled"`
 	WafEnabled             bool   `json:"waf_enabled"`
 	WafMode                string `json:"waf_mode"`
@@ -125,11 +123,7 @@ func (r *websiteResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Description: "Public folder relative to app root (e.g. public).",
 				Default:     stringdefault.StaticString(""),
 			},
-			"env_file_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "Environment file name.",
-			},
-			"service_hostname_enabled": schema.BoolAttribute{
+"service_hostname_enabled": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "Whether the built-in service hostname is enabled.",
@@ -385,8 +379,7 @@ func (r *websiteResource) mapToState(api *websiteAPI, state *websiteModel, custo
 	state.Runtime = types.StringValue(api.Runtime)
 	state.RuntimeVersion = types.StringValue(api.RuntimeVersion)
 	state.PublicFolder = types.StringValue(api.PublicFolder)
-	state.EnvFileName = types.StringValue(api.EnvFileName)
-	state.ServiceHostnameEnabled = types.BoolValue(api.ServiceHostnameEnabled)
+state.ServiceHostnameEnabled = types.BoolValue(api.ServiceHostnameEnabled)
 	state.WafEnabled = types.BoolValue(api.WafEnabled)
 	state.WafMode = types.StringValue(api.WafMode)
 	state.RateLimitEnabled = types.BoolValue(api.RateLimitEnabled)

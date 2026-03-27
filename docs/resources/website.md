@@ -53,7 +53,6 @@ resource "hosting_website" "myapp" {
 ### Read-Only
 
 - `id` (String) Website ID.
-- `env_file_name` (String) Environment file name.
 - `status` (String) Current status.
 
 ## Import
