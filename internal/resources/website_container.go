@@ -34,6 +34,15 @@ type containerSpecModel struct {
 	ProxyPort         types.Int64           `tfsdk:"proxy_port"`
 	Ports             []containerPortModel  `tfsdk:"ports"`
 	Volumes           []containerMountModel `tfsdk:"volumes"`
+	Health            *containerHealthModel `tfsdk:"health_check"`
+}
+
+type containerHealthModel struct {
+	Type           types.String `tfsdk:"type"`
+	Path           types.String `tfsdk:"path"`
+	Port           types.Int64  `tfsdk:"port"`
+	TimeoutSeconds types.Int64  `tfsdk:"timeout_seconds"`
+	Retries        types.Int64  `tfsdk:"retries"`
 }
 
 type containerPortModel struct {
@@ -49,16 +58,25 @@ type containerMountModel struct {
 
 // containerSpecJSON mirrors model.ContainerSpec in the platform.
 type containerSpecJSON struct {
-	Image             string              `json:"image"`
-	Command           *string             `json:"command,omitempty"`
-	ImagePullSecretID *string             `json:"image_pull_secret_id,omitempty"`
-	PortMappings      []containerPortJSON `json:"port_mappings"`
-	VolumeMounts      []containerVolJSON  `json:"volume_mounts"`
-	RestartPolicy     string              `json:"restart_policy"`
-	MaxMemoryMB       int64               `json:"max_memory_mb"`
-	MaxCPUCores       float64             `json:"max_cpu_cores"`
-	ProxyPort         *int64              `json:"proxy_port,omitempty"`
-	ProxyPath         *string             `json:"proxy_path,omitempty"`
+	Image             string               `json:"image"`
+	Command           *string              `json:"command,omitempty"`
+	ImagePullSecretID *string              `json:"image_pull_secret_id,omitempty"`
+	PortMappings      []containerPortJSON  `json:"port_mappings"`
+	VolumeMounts      []containerVolJSON   `json:"volume_mounts"`
+	RestartPolicy     string               `json:"restart_policy"`
+	MaxMemoryMB       int64                `json:"max_memory_mb"`
+	MaxCPUCores       float64              `json:"max_cpu_cores"`
+	ProxyPort         *int64               `json:"proxy_port,omitempty"`
+	ProxyPath         *string              `json:"proxy_path,omitempty"`
+	HealthCheck       *containerHealthJSON `json:"health_check,omitempty"`
+}
+
+type containerHealthJSON struct {
+	Type           string `json:"type"`
+	Path           string `json:"path,omitempty"`
+	Port           int64  `json:"port,omitempty"`
+	TimeoutSeconds int64  `json:"timeout_seconds,omitempty"`
+	Retries        int64  `json:"retries,omitempty"`
 }
 
 type containerPortJSON struct {
@@ -128,6 +146,38 @@ func containerSchema() schema.SingleNestedAttribute {
 							Computed:    true,
 							Description: "tcp or udp.",
 						},
+					},
+				},
+			},
+			"health_check": schema.SingleNestedAttribute{
+				Optional: true,
+				Description: "How the platform decides a rollout worked. Probed from outside the " +
+					"container, so the image needs no health endpoint or shell. Without one, a " +
+					"container that starts and immediately crashes is reported as running.",
+				Attributes: map[string]schema.Attribute{
+					"type": schema.StringAttribute{
+						Required:    true,
+						Description: "tcp (the port accepts a connection) or http (a request to path returns a non-5xx).",
+					},
+					"path": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "Path to request for an http check. Defaults to /.",
+					},
+					"port": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "Defaults to the first declared port.",
+					},
+					"timeout_seconds": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "Bounds one attempt. Default 3.",
+					},
+					"retries": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "Attempts, one second apart. Together with the timeout this is how long a slow boot may take. Default 30.",
 					},
 				},
 			},
@@ -207,6 +257,15 @@ func containerRuntimeConfig(spec *containerSpecModel, priorProxyPort types.Int64
 			ReadOnly:      v.ReadOnly.ValueBool(),
 		})
 	}
+	if h := spec.Health; h != nil {
+		out.HealthCheck = &containerHealthJSON{
+			Type:           h.Type.ValueString(),
+			Path:           h.Path.ValueString(),
+			Port:           h.Port.ValueInt64(),
+			TimeoutSeconds: h.TimeoutSeconds.ValueInt64(),
+			Retries:        h.Retries.ValueInt64(),
+		}
+	}
 
 	raw, err := json.Marshal(out)
 	if err != nil {
@@ -253,6 +312,15 @@ func containerSpecFromJSON(raw json.RawMessage) *containerSpecModel {
 			ContainerPath: types.StringValue(v.ContainerPath),
 			ReadOnly:      types.BoolValue(v.ReadOnly),
 		})
+	}
+	if h := in.HealthCheck; h != nil {
+		spec.Health = &containerHealthModel{
+			Type:           types.StringValue(h.Type),
+			Path:           stringOrNull(&h.Path),
+			Port:           types.Int64Value(h.Port),
+			TimeoutSeconds: types.Int64Value(h.TimeoutSeconds),
+			Retries:        types.Int64Value(h.Retries),
+		}
 	}
 	return spec
 }
