@@ -180,16 +180,27 @@ resource "hosting_preview_config" "myapp" {
 }
 
 # ─── Container ─────────────────────────────────────────────────────
+#
+# A container is a website whose runtime is an image, so it is the same
+# resource — and its env vars, domains and status work the same way.
 
-resource "hosting_container" "meilisearch" {
-  tenant_id     = var.tenant_id
-  name          = "meilisearch"
-  image         = "getmeili/meilisearch:v1.6"
-  max_memory_mb = 512
+resource "hosting_website" "meilisearch" {
+  tenant_id = var.tenant_id
+  folder    = "meilisearch"
+  runtime   = "container"
+
+  container {
+    image         = "getmeili/meilisearch:v1.6"
+    max_memory_mb = 512
+
+    ports = [
+      { container_port = 7700, protocol = "tcp" },
+    ]
+  }
 }
 
-resource "hosting_container_env_vars" "meilisearch" {
-  container_id = hosting_container.meilisearch.id
+resource "hosting_website_env_vars" "meilisearch" {
+  website_id = hosting_website.meilisearch.id
 
   secret_vars = {
     MEILI_MASTER_KEY = var.meili_key

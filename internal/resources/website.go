@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/massive-hosting/go-hosting"
@@ -42,7 +43,11 @@ type websiteModel struct {
 	RuntimeConfig          types.String `tfsdk:"runtime_config"`
 	CdnEnabled             types.Bool   `tfsdk:"cdn_enabled"`
 	CdnConfig              types.String `tfsdk:"cdn_config"`
+	Enabled                types.Bool   `tfsdk:"enabled"`
 	Status                 types.String `tfsdk:"status"`
+	// Container is the typed form of runtime_config when runtime is
+	// "container". See website_container.go.
+	Container *containerSpecModel `tfsdk:"container"`
 }
 
 type websiteAPI struct {
@@ -59,10 +64,14 @@ type websiteAPI struct {
 	RateLimitEnabled       bool   `json:"rate_limit_enabled"`
 	RateLimitRPS           int    `json:"rate_limit_rps"`
 	RateLimitBurst         int    `json:"rate_limit_burst"`
-	RuntimeConfig          string `json:"runtime_config"`
-	CdnEnabled             bool   `json:"cdn_enabled"`
-	CdnConfig              string `json:"cdn_config"`
-	Status                 string `json:"status"`
+	// runtime_config and cdn_config come back as JSON objects. Declaring them
+	// as string made every read of a website that had either one fail to
+	// unmarshal.
+	RuntimeConfig json.RawMessage `json:"runtime_config"`
+	CdnEnabled    bool            `json:"cdn_enabled"`
+	CdnConfig     json.RawMessage `json:"cdn_config"`
+	Enabled       bool            `json:"enabled"`
+	Status        string          `json:"status"`
 }
 
 func NewWebsite() resource.Resource {
@@ -111,11 +120,20 @@ func (r *websiteResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"runtime": schema.StringAttribute{
 				Required:    true,
-				Description: "Runtime type (e.g. php, nodejs, python, ruby, static).",
+				Description: "Runtime type: php, node, python, ruby, static or container.",
+			},
+			"container": containerSchema(),
+			"enabled": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether the workload should be running. Only the container runtime acts on it.",
+				Default:     booldefault.StaticBool(true),
 			},
 			"runtime_version": schema.StringAttribute{
-				Required:    true,
-				Description: "Runtime version (e.g. 8.4, 22, 3.13).",
+				Optional:    true,
+				Computed:    true,
+				Description: "Runtime version (e.g. 8.4, 22, 3.13). Not used by the container runtime, which is versioned by its image tag.",
+				Default:     stringdefault.StaticString(""),
 			},
 			"public_folder": schema.StringAttribute{
 				Optional:    true,
@@ -249,14 +267,21 @@ func (r *websiteResource) Create(ctx context.Context, req resource.CreateRequest
 	if !plan.RateLimitBurst.IsNull() && !plan.RateLimitBurst.IsUnknown() {
 		body["rate_limit_burst"] = plan.RateLimitBurst.ValueInt64()
 	}
-	if !plan.RuntimeConfig.IsNull() && !plan.RuntimeConfig.IsUnknown() && plan.RuntimeConfig.ValueString() != "{}" {
-		body["runtime_config"] = plan.RuntimeConfig.ValueString()
+	if plan.Runtime.ValueString() == runtimeContainer {
+		raw, err := containerRuntimeConfig(plan.Container, types.Int64Null())
+		if err != nil {
+			resp.Diagnostics.AddError("Invalid container block", err.Error())
+			return
+		}
+		body["runtime_config"] = json.RawMessage(raw)
+	} else if !plan.RuntimeConfig.IsNull() && !plan.RuntimeConfig.IsUnknown() && plan.RuntimeConfig.ValueString() != "{}" {
+		body["runtime_config"] = json.RawMessage(plan.RuntimeConfig.ValueString())
 	}
 	if !plan.CdnEnabled.IsNull() && !plan.CdnEnabled.IsUnknown() {
 		body["cdn_enabled"] = plan.CdnEnabled.ValueBool()
 	}
 	if !plan.CdnConfig.IsNull() && !plan.CdnConfig.IsUnknown() && plan.CdnConfig.ValueString() != "{}" {
-		body["cdn_config"] = plan.CdnConfig.ValueString()
+		body["cdn_config"] = json.RawMessage(plan.CdnConfig.ValueString())
 	}
 
 	result, err := hosting.Post[websiteAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/customers/%s/websites", customerID), body)
@@ -322,11 +347,23 @@ func (r *websiteResource) Update(ctx context.Context, req resource.UpdateRequest
 		"rate_limit_burst":         plan.RateLimitBurst.ValueInt64(),
 		"cdn_enabled":             plan.CdnEnabled.ValueBool(),
 	}
-	if !plan.RuntimeConfig.IsNull() && !plan.RuntimeConfig.IsUnknown() {
-		body["runtime_config"] = plan.RuntimeConfig.ValueString()
+	if plan.Runtime.ValueString() == runtimeContainer {
+		// The derived proxy port lives in prior state, not in the config.
+		prior := types.Int64Null()
+		if state.Container != nil {
+			prior = state.Container.ProxyPort
+		}
+		raw, err := containerRuntimeConfig(plan.Container, prior)
+		if err != nil {
+			resp.Diagnostics.AddError("Invalid container block", err.Error())
+			return
+		}
+		body["runtime_config"] = json.RawMessage(raw)
+	} else if !plan.RuntimeConfig.IsNull() && !plan.RuntimeConfig.IsUnknown() {
+		body["runtime_config"] = json.RawMessage(plan.RuntimeConfig.ValueString())
 	}
 	if !plan.CdnConfig.IsNull() && !plan.CdnConfig.IsUnknown() {
-		body["cdn_config"] = plan.CdnConfig.ValueString()
+		body["cdn_config"] = json.RawMessage(plan.CdnConfig.ValueString())
 	}
 	if !plan.WafExclusions.IsNull() && !plan.WafExclusions.IsUnknown() {
 		var exclusions []int
@@ -385,10 +422,19 @@ state.ServiceHostnameEnabled = types.BoolValue(api.ServiceHostnameEnabled)
 	state.RateLimitEnabled = types.BoolValue(api.RateLimitEnabled)
 	state.RateLimitRPS = types.Int64Value(int64(api.RateLimitRPS))
 	state.RateLimitBurst = types.Int64Value(int64(api.RateLimitBurst))
-	state.RuntimeConfig = types.StringValue(api.RuntimeConfig)
+	state.RuntimeConfig = types.StringValue(rawOrEmptyObject(api.RuntimeConfig))
 	state.CdnEnabled = types.BoolValue(api.CdnEnabled)
-	state.CdnConfig = types.StringValue(api.CdnConfig)
+	state.CdnConfig = types.StringValue(rawOrEmptyObject(api.CdnConfig))
+	state.Enabled = types.BoolValue(api.Enabled)
 	state.Status = types.StringValue(api.Status)
+
+	// A container's spec is the same runtime_config, read back into the typed
+	// block so drift shows up per field rather than as one JSON blob.
+	if api.Runtime == runtimeContainer {
+		state.Container = containerSpecFromJSON(api.RuntimeConfig)
+	} else {
+		state.Container = nil
+	}
 
 	exclusions := make([]types.Int64, len(api.WafExclusions))
 	for i, id := range api.WafExclusions {
@@ -406,4 +452,15 @@ func (r *websiteResource) resolveCustomerID(v types.String) string {
 		return v.ValueString()
 	}
 	return r.data.CustomerID
+}
+
+// runtimeContainer is the runtime of a website that runs an image.
+const runtimeContainer = "container"
+
+// rawOrEmptyObject renders a JSON field for the string-typed state attribute.
+func rawOrEmptyObject(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return "{}"
+	}
+	return string(raw)
 }

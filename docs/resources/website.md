@@ -7,7 +7,8 @@ description: |-
 
 # hosting_website (Resource)
 
-Manages a web application. Supports PHP, Node.js, Python, Ruby, Go, Java, and static sites.
+Manages a website. Supports PHP, Node.js, Python, Ruby and static sites, and
+OCI containers — a container is a website whose `runtime` is `container`.
 
 ## Example Usage
 
@@ -30,15 +31,65 @@ resource "hosting_website" "myapp" {
 }
 ```
 
+### A container
+
+A container is the same resource with a different runtime. Its image, limits
+and ports go in the `container` block, which is stored as the website's
+runtime_config; everything else — domains, env vars, status — works exactly as
+it does for any other runtime.
+
+```hcl
+resource "hosting_website" "api" {
+  tenant_id = var.tenant_id
+  folder    = "metrics-api"
+  runtime   = "container"
+
+  container {
+    image          = "ghcr.io/you/metrics-api:1.8.2"
+    command        = "npm start"
+    restart_policy = "always"
+    max_memory_mb  = 512
+    max_cpu_cores  = 1
+
+    ports = [
+      { container_port = 8080, protocol = "tcp" },
+    ]
+
+    volumes = [
+      { host_path = "data", container_path = "/app/data", read_only = false },
+    ]
+  }
+}
+
+resource "hosting_website_env_vars" "api" {
+  website_id = hosting_website.api.id
+  vars       = { LOG_LEVEL = "info" }
+  secret_vars = { API_TOKEN = var.api_token }
+}
+```
+
 ## Schema
 
 ### Required
 
 - `tenant_id` (String) Tenant ID. Changing this forces a new resource.
-- `runtime` (String) Runtime type (e.g. php, nodejs, python, ruby, static).
-- `runtime_version` (String) Runtime version (e.g. 8.4, 22, 3.13).
+- `runtime` (String) Runtime type: `php`, `node`, `python`, `ruby`, `static` or `container`.
 
 ### Optional
+
+- `runtime_version` (String) Runtime version (e.g. `8.4`, `22`, `3.13`). Not used by the `container` runtime, which is versioned by its image tag. Default: `""`.
+- `container` (Attributes) Container settings. Required when `runtime` is `container`, ignored otherwise. Stored as the website's runtime_config.
+  - `image` (String, Required) Image reference including the tag.
+  - `command` (String) Overrides the image ENTRYPOINT.
+  - `image_pull_secret_id` (String) Registry credential for a private image.
+  - `restart_policy` (String) `always`, `on-failure`, `unless-stopped` or `no`. Default: `"always"`.
+  - `max_memory_mb` (Number) Hard memory ceiling. A container that exceeds it is killed with exit code 137. Default: `512`.
+  - `max_cpu_cores` (Number) CPU ceiling in cores. Default: `1.0`.
+  - `proxy_path` (String) Serve the container under this path on the node, for a container with no domain of its own.
+  - `proxy_port` (Number, Read-Only) The host port the platform derives.
+  - `ports` (Attributes List) `container_port` (Required) and `protocol` (`tcp`/`udp`).
+  - `volumes` (Attributes List) `host_path`, `container_path` (both Required) and `read_only`.
+- `enabled` (Boolean) Whether the workload should be running. Only the container runtime acts on it. Default: `true`.
 
 - `customer_id` (String) Customer ID. Defaults to provider `customer_id`. Changing this forces a new resource.
 - `public_folder` (String) Public folder relative to app root (e.g. `public`). Default: `""`.
