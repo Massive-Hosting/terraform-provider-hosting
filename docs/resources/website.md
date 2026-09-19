@@ -87,7 +87,7 @@ resource "hosting_website_env_vars" "api" {
   - `max_cpu_cores` (Number) CPU ceiling in cores. Default: `1.0`.
   - `proxy_path` (String) Serve the container under this path on the node, for a container with no domain of its own.
   - `proxy_port` (Number, Read-Only) The host port the platform derives.
-  - `ports` (Attributes List) `container_port` (Required) and `protocol` (`tcp`/`udp`).
+  - `ports` (Attributes List) `container_port` (Required), `host_port` (Optional, defaults to `container_port`) and `protocol` (`tcp`/`udp`). `host_port` is the port published on the workload's internal address — what a connected website reaches the service on, and what the generated `_PORT` variable and the health check use.
   - `volumes` (Attributes List) `host_path`, `container_path` (both Required) and `read_only`.
 - `enabled` (Boolean) Whether the workload should be running. Only the container runtime acts on it. Default: `true`.
 

@@ -47,6 +47,7 @@ type containerHealthModel struct {
 
 type containerPortModel struct {
 	ContainerPort types.Int64  `tfsdk:"container_port"`
+	HostPort      types.Int64  `tfsdk:"host_port"`
 	Protocol      types.String `tfsdk:"protocol"`
 }
 
@@ -81,6 +82,7 @@ type containerHealthJSON struct {
 
 type containerPortJSON struct {
 	ContainerPort int64  `json:"container_port"`
+	HostPort      int64  `json:"host_port,omitempty"`
 	Protocol      string `json:"protocol"`
 }
 
@@ -140,6 +142,14 @@ func containerSchema() schema.SingleNestedAttribute {
 						"container_port": schema.Int64Attribute{
 							Required:    true,
 							Description: "Port inside the container.",
+						},
+						"host_port": schema.Int64Attribute{
+							Optional: true,
+							Computed: true,
+							Description: "Port published on the workload's internal address. " +
+								"Defaults to container_port. This is the port a connected " +
+								"website reaches the service on, so it is what the generated " +
+								"_PORT variable and the health check use.",
 						},
 						"protocol": schema.StringAttribute{
 							Optional:    true,
@@ -247,6 +257,7 @@ func containerRuntimeConfig(spec *containerSpecModel, priorProxyPort types.Int64
 	for _, p := range spec.Ports {
 		out.PortMappings = append(out.PortMappings, containerPortJSON{
 			ContainerPort: p.ContainerPort.ValueInt64(),
+			HostPort:      p.HostPort.ValueInt64(),
 			Protocol:      valueOr(p.Protocol.ValueString(), "tcp"),
 		})
 	}
@@ -303,7 +314,11 @@ func containerSpecFromJSON(raw json.RawMessage) *containerSpecModel {
 	for _, p := range in.PortMappings {
 		spec.Ports = append(spec.Ports, containerPortModel{
 			ContainerPort: types.Int64Value(p.ContainerPort),
-			Protocol:      types.StringValue(p.Protocol),
+			// The API omits host_port when it equals the container port, but
+			// the attribute is computed, so state has to carry the number the
+			// platform actually publishes rather than a null.
+			HostPort: types.Int64Value(publishedOr(p.HostPort, p.ContainerPort)),
+			Protocol: types.StringValue(p.Protocol),
 		})
 	}
 	for _, v := range in.VolumeMounts {
@@ -343,3 +358,12 @@ func valueOr[T comparable](v, fallback T) T {
 }
 
 var _ = context.Background
+
+// publishedOr returns the host port, falling back to the container port — the
+// same rule the platform applies when a mapping declares no host port.
+func publishedOr(hostPort, containerPort int64) int64 {
+	if hostPort != 0 {
+		return hostPort
+	}
+	return containerPort
+}
