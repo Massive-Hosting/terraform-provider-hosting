@@ -7,6 +7,7 @@ import (
 	"github.com/massive-hosting/go-hosting"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -27,6 +28,7 @@ type websiteDaemonModel struct {
 	ID            types.String `tfsdk:"id"`
 	CustomerID    types.String `tfsdk:"customer_id"`
 	WebsiteID      types.String `tfsdk:"website_id"`
+	Name          types.String `tfsdk:"name"`
 	Command       types.String `tfsdk:"command"`
 	ProxyPath     types.String `tfsdk:"proxy_path"`
 	ProxyPort     types.Int64  `tfsdk:"proxy_port"`
@@ -35,6 +37,7 @@ type websiteDaemonModel struct {
 	MaxMemoryMB      types.Int64  `tfsdk:"max_memory_mb"`
 	RestartPolicy    types.String `tfsdk:"restart_policy"`
 	RestartMaxRetries types.Int64 `tfsdk:"restart_max_retries"`
+	Interactive      types.Bool   `tfsdk:"interactive"`
 	Enabled          types.Bool   `tfsdk:"enabled"`
 	Status        types.String `tfsdk:"status"`
 	StatusMessage types.String `tfsdk:"status_message"`
@@ -43,6 +46,7 @@ type websiteDaemonModel struct {
 type daemonAPI struct {
 	ID            string  `json:"id"`
 	WebsiteID      string  `json:"website_id"`
+	Name          string  `json:"name"`
 	Command       string  `json:"command"`
 	ProxyPath     string  `json:"proxy_path"`
 	ProxyPort     int64   `json:"proxy_port"`
@@ -51,6 +55,7 @@ type daemonAPI struct {
 	MaxMemoryMB      int64  `json:"max_memory_mb"`
 	RestartPolicy    string `json:"restart_policy"`
 	RestartMaxRetries int64 `json:"restart_max_retries"`
+	Interactive      bool   `json:"interactive"`
 	Enabled          bool   `json:"enabled"`
 	Status        string  `json:"status"`
 	StatusMessage *string `json:"status_message"`
@@ -79,6 +84,9 @@ func (r *websiteDaemonResource) Schema(_ context.Context, _ resource.SchemaReque
 			"website_id": schema.StringAttribute{
 				Required: true, Description: "Website ID.",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
+			"name": schema.StringAttribute{
+				Required: true, Description: "Human-friendly name (lowercase alphanumeric + hyphens, 2-30 chars).",
 			},
 			"command": schema.StringAttribute{
 				Required: true, Description: "Command to run.",
@@ -110,6 +118,10 @@ func (r *websiteDaemonResource) Schema(_ context.Context, _ resource.SchemaReque
 			"restart_max_retries": schema.Int64Attribute{
 				Optional: true, Computed: true, Description: "Max restart attempts before giving up (0 = unlimited).",
 				Default: int64default.StaticInt64(0),
+			},
+			"interactive": schema.BoolAttribute{
+				Optional: true, Computed: true, Description: "Run inside tmux for interactive terminal access.",
+				Default: booldefault.StaticBool(false),
 			},
 			"enabled": schema.BoolAttribute{
 				Computed: true, Description: "Whether the daemon is enabled.",
@@ -150,6 +162,7 @@ func (r *websiteDaemonResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	body := map[string]any{
+		"name":                plan.Name.ValueString(),
 		"command":             plan.Command.ValueString(),
 		"proxy_path":          plan.ProxyPath.ValueString(),
 		"proxy_port":          plan.ProxyPort.ValueInt64(),
@@ -158,6 +171,7 @@ func (r *websiteDaemonResource) Create(ctx context.Context, req resource.CreateR
 		"max_memory_mb":       plan.MaxMemoryMB.ValueInt64(),
 		"restart_policy":      plan.RestartPolicy.ValueString(),
 		"restart_max_retries": plan.RestartMaxRetries.ValueInt64(),
+		"interactive":         plan.Interactive.ValueBool(),
 	}
 
 	result, err := hosting.Post[daemonAPI](ctx, r.data.Client, fmt.Sprintf("/api/v1/websites/%s/daemons", plan.WebsiteID.ValueString()), body)
@@ -206,6 +220,7 @@ func (r *websiteDaemonResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	body := map[string]any{
+		"name":                plan.Name.ValueString(),
 		"command":             plan.Command.ValueString(),
 		"proxy_path":          plan.ProxyPath.ValueString(),
 		"proxy_port":          plan.ProxyPort.ValueInt64(),
@@ -214,6 +229,7 @@ func (r *websiteDaemonResource) Update(ctx context.Context, req resource.UpdateR
 		"max_memory_mb":       plan.MaxMemoryMB.ValueInt64(),
 		"restart_policy":      plan.RestartPolicy.ValueString(),
 		"restart_max_retries": plan.RestartMaxRetries.ValueInt64(),
+		"interactive":         plan.Interactive.ValueBool(),
 	}
 
 	result, err := hosting.Put[daemonAPI](ctx, r.data.Client, "/api/v1/daemons/"+state.ID.ValueString(), body)
@@ -254,6 +270,7 @@ func (r *websiteDaemonResource) ImportState(ctx context.Context, req resource.Im
 func mapDaemon(api *daemonAPI, state *websiteDaemonModel, customerID string) {
 	state.ID = types.StringValue(api.ID)
 	state.WebsiteID = types.StringValue(api.WebsiteID)
+	state.Name = types.StringValue(api.Name)
 	state.Command = types.StringValue(api.Command)
 	state.ProxyPath = types.StringValue(api.ProxyPath)
 	state.ProxyPort = types.Int64Value(api.ProxyPort)
@@ -262,6 +279,7 @@ func mapDaemon(api *daemonAPI, state *websiteDaemonModel, customerID string) {
 	state.MaxMemoryMB = types.Int64Value(api.MaxMemoryMB)
 	state.RestartPolicy = types.StringValue(api.RestartPolicy)
 	state.RestartMaxRetries = types.Int64Value(api.RestartMaxRetries)
+	state.Interactive = types.BoolValue(api.Interactive)
 	state.Enabled = types.BoolValue(api.Enabled)
 	state.Status = types.StringValue(api.Status)
 	if api.StatusMessage != nil {
