@@ -102,6 +102,7 @@ func (p *hostingProvider) Resources(_ context.Context) []func() resource.Resourc
 		resources.NewSSHKey,
 		resources.NewEgressRule,
 		resources.NewWebsiteEnvVars,
+		resources.NewServiceBinding,
 		resources.NewWebsiteDaemon,
 		resources.NewWebsiteCronJob,
 		resources.NewPreviewConfig,

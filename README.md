@@ -78,6 +78,7 @@ resource "hosting_fqdn" "main" {
 |---|---|
 | `hosting_website` | Web application (PHP, Node.js, Python, Ruby, Go, static) |
 | `hosting_website_env_vars` | Website environment variables (bulk) |
+| `hosting_service_binding` | Connects a website to a container service in the same plan |
 | `hosting_website_daemon` | Long-running daemon process |
 | `hosting_website_cron_job` | Scheduled cron job |
 | `hosting_database` | MySQL database |
@@ -92,8 +93,6 @@ resource "hosting_fqdn" "main" {
 | `hosting_email_account` | Email account |
 | `hosting_email_alias` | Email alias |
 | `hosting_email_forward` | Email forward rule |
-| `hosting_container` | OCI container |
-| `hosting_container_env_vars` | Container environment variables (bulk) |
 | `hosting_wireguard_peer` | WireGuard VPN peer |
 | `hosting_ssh_key` | SSH public key |
 | `hosting_egress_rule` | Egress firewall rule |

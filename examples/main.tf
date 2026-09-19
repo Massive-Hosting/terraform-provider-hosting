@@ -60,13 +60,13 @@ resource "hosting_website_env_vars" "myapp" {
 }
 
 resource "hosting_website_daemon" "worker" {
-  website_id     = hosting_website.myapp.id
+  website_id    = hosting_website.myapp.id
   command       = "php artisan queue:work --tries=3"
   max_memory_mb = 256
 }
 
 resource "hosting_website_cron_job" "scheduler" {
-  website_id       = hosting_website.myapp.id
+  website_id      = hosting_website.myapp.id
   schedule        = "* * * * *"
   command         = "php artisan schedule:run"
   timeout_seconds = 60
@@ -87,7 +87,7 @@ resource "hosting_database_user" "myuser" {
 
 resource "hosting_fqdn" "main" {
   fqdn        = "myapp.example.com"
-  website_id   = hosting_website.myapp.id
+  website_id  = hosting_website.myapp.id
   ssl_enabled = true
 }
 
@@ -161,7 +161,7 @@ resource "hosting_email_forward" "backup" {
 # ─── Preview Environments ──────────────────────────────────────────
 
 resource "hosting_preview_config" "myapp" {
-  website_id              = hosting_website.myapp.id
+  website_id             = hosting_website.myapp.id
   github_repo_owner      = "my-org"
   github_repo_name       = "my-app"
   github_installation_id = 12345678
@@ -205,6 +205,19 @@ resource "hosting_website_env_vars" "meilisearch" {
   secret_vars = {
     MEILI_MASTER_KEY = var.meili_key
   }
+}
+
+# ─── Connecting the two ────────────────────────────────────────────
+#
+# myapp now has MEILI_HOST=meilisearch, MEILI_PORT=7700 and
+# MEILI_URL=http://meilisearch:7700 in its environment. They are derived
+# from this binding every time the site is provisioned rather than stored,
+# so moving or re-addressing the service needs no change here.
+
+resource "hosting_service_binding" "myapp_search" {
+  website_id = hosting_website.myapp.id
+  target_id  = hosting_website.meilisearch.id
+  env_prefix = "MEILI"
 }
 
 # ─── Uptime Monitoring ─────────────────────────────────────────────
